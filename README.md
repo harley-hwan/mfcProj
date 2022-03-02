@@ -1,4 +1,4 @@
-# mfcProject
+# MFC project
 
 This is my workspace
   for MFC programming project
