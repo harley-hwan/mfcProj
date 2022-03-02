@@ -1,0 +1,5307 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\f0\fs22\lang1033 unit Unit2;\par
+\par
+interface\par
+\par
+uses\par
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,\par
+  Pegvcl, Pegrpapi, ExtCtrls, Math, StrUtils, Vcl.Touch.GestureMgr;\par
+\par
+type\par
+  TForm2 = class(TForm)\par
+    Timer1: TTimer;\par
+    Pego1: PEGraph;\par
+    procedure createallcharts;\par
+    Procedure CreateSimpleGraph;\par
+    Procedure LoadData(sName: string);\par
+    procedure FormResize(Sender: TObject);\par
+    procedure Timer1Timer(Sender: TObject);\par
+    procedure pego1MouseMove(Sender: TObject; Shift: TShiftState; X,\par
+      Y: Integer);\par
+    procedure FormShow(Sender: TObject);\par
+    procedure Pego1TableAnnotation(Sender: TObject; DblClick, nIndex, nRow,\par
+      nColumn: Integer);\par
+    procedure Pego1DataHotSpot(Sender: TObject; DblClick, SubsetIndex,\par
+      PointIndex: Integer);\par
+    procedure Pego1CursorMoved(Sender: TObject);\par
+    procedure Pego1CustomTrackingDataText(Sender: TObject);\par
+    public\par
+    \{ Public declarations \}\par
+    m_nRealTimeCounter : LongInt;\par
+    m_nSinCounter : LongInt;\par
+\par
+    end;\par
+\par
+  MyTempData = array[0..100000] of Single;\par
+  MyTempYData = array[0..12000] of Single;\par
+  YD3 = array[0..100000] of Single;\par
+  UpperArray = array[0..100000] of Single;\par
+  LowerArray = array[0..100000] of Single;\par
+  SlowOC = array[0..100000] of Single;\par
+  Kperiod  = array[0..100000] of Single;\par
+  HighA  = array[0..100000] of Single;\par
+  LowA  = array[0..100000] of Single;\par
+  szsa = array[0..4] of WideString;\par
+\par
+\par
+Type\par
+  Pego  = class(PEgraph)\par
+\par
+  private\par
+    \{ Private declarations \}\par
+\par
+  public\par
+    \{ Public declarations \}\par
+\par
+  end;\par
+\par
+  var\par
+  Form2: TForm2;\par
+  Pego1: Pego;\par
+\par
+implementation\par
+   uses Unit1, Unit3, Unit4, Unit5, Unit6;\par
+\{$R *.DFM\}\par
+\par
+\{///////////////////////////////////////\}\par
+\{creates all the charts\}\par
+Procedure TForm2.CreateAllCharts;\par
+\par
+Var\par
+nChart : Integer;\par
+t      : WideString;\par
+s      : Integer;\par
+p      : LongInt;\par
+nSLT   : LongInt;\par
+i : LongInt;   //from section 16\par
+r : Integer;\par
+c : Integer;\par
+d : Double;\par
+d2: Double;\par
+fp: Single;\par
+b : Boolean;\par
+dwColor : DWORD;\par
+MyYData: array[0..48] Of Single;  //from section 18\par
+MyZData: array[0..12] Of Single;  //from section 25\par
+o : Integer;\par
+j : Integer;\par
+k : Integer;\par
+pt: ^MyTempData;\par
+ptYD: ^MyTempYData;\par
+bAddAnnot: Boolean;\par
+nCount: Integer;\par
+szs: szsa;\par
+fRnd: Single;\par
+axis: Integer;\par
+dwArray: array[0..1] Of DWORD;\par
+nColorIndex: Integer;\par
+tstr: WideString;\par
+tr: TRect;\par
+aCnt: Integer;\par
+annot: Integer;\par
+nRndRow: Integer;\par
+nRndCol: Integer;\par
+\par
+Begin\par
+\par
+//check to see if a list item has been selected\par
+if form1.list1.ItemIndex < 0 then exit;\par
+\par
+//pull the 3 digit number out of the index and convert it to an integer\par
+t := form1.list1.items.strings[form1.list1.ItemIndex];\par
+t:=Copy(t,1,3);\par
+nChart := StrToInt(t);\par
+\par
+Pego1.PEactions := epeactions(20);\par
+Pego1.PrepareImages := True;\par
+form2.Timer1.Enabled := False;\par
+\par
+If nChart = 0 Then\par
+  begin\par
+//*********************************************************************\par
+//*********************************************************************\}\par
+\{000  *** Simple Graph ***\}\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+    //! Left-Click and drag to draw zoom box. Use popup memu or 'z' to undo zoom. //\par
+\par
+    // Simple example show the basics of a graph object. //\par
+    // Graph's generally only contain YData because we assume\par
+    // data is plotted equally spaced left to right.\par
+\par
+    // Enable Bar Glass Effect //\par
+    Pego1.BarGlassEffect := True;\par
+\par
+    // Enable Plotting style gradient and bevel features //\par
+    Pego1.AreaGradientStyle := gRadialBottomRightPG;\par
+    Pego1.AreaBevelStyle := gMediumSmooth;\par
+    Pego1.SplineGradientStyle := gRadialBottomRightPG;\par
+    Pego1.SplineBevelStyle := gMediumSplineBevel;\par
+\par
+    // v7.2 new features //\par
+    Pego1.PointGradientStyle := gVerticalAscentInversePG;\par
+    Pego1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+    Pego1.LineSymbolThickness := 3;\par
+    Pego1.AreaBorder := 1;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    // Prepare images in memory //\par
+    Pego1.PrepareImages := True;\par
+\par
+    // Set Subsets, Points, and fill with YData //\par
+    Pego1.Subsets := 4;\par
+    Pego1.Points := 12;\par
+    For s := 0 To 3 do  //4-1//\par
+        For p := 0 To 11 do  //12-1//\par
+            Pego1.YData[s, p] := (p + 1) * 50 + (Random * 250);\par
+\par
+    // Set Various Properties //\par
+    Pego1.DeskColor := Pego1.PEargb(128, 192, 192, 192);\par
+    Pego1.GraphBackColor := 0;\par
+    Pego1.GraphForeColor := Pego1.PEargb(128, 255, 255, 255);\par
+\par
+    // Set DataShadows to show shadows//\par
+    Pego1.DataShadows := gWithShadows;\par
+    Pego1.BorderTypes := gInset;\par
+    Pego1.MainTitle := 'Units Sold per Month';\par
+    Pego1.SubTitle := '';\par
+    Pego1.YAxisLabel := 'Units Sold';\par
+    Pego1.XAxisLabel := 'Month';\par
+    Pego1.FocalRect := False;\par
+    Pego1.PlottingMethod := gArea;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.GridStyle := gDot;\par
+    Pego1.AllowRibbon := True;\par
+    Pego1.AllowZooming := gHorzPlusVertZooming;\par
+    Pego1.ZoomStyle := gRO2NOT;\par
+\par
+    // Set SubsetLabels property array for 4 subsets //\par
+    Pego1.SubsetLabels[0] := 'Texas';\par
+    Pego1.SubsetLabels[1] := 'Florida';\par
+    Pego1.SubsetLabels[2] := 'Washington';\par
+    Pego1.SubsetLabels[3] := 'California';\par
+\par
+    // Set PointLabels property array for 12 points //\par
+    Pego1.PointLabels[0] := 'January';\par
+    Pego1.PointLabels[1] := 'February';\par
+    Pego1.PointLabels[2] := 'March';\par
+    Pego1.PointLabels[3] := 'April';\par
+    Pego1.PointLabels[4] := 'May';\par
+    Pego1.PointLabels[5] := 'June';\par
+    Pego1.PointLabels[6] := 'July';\par
+    Pego1.PointLabels[7] := 'August';\par
+    Pego1.PointLabels[8] := 'September';\par
+    Pego1.PointLabels[9] := 'October';\par
+    Pego1.PointLabels[10] := 'November';\par
+    Pego1.PointLabels[11] := 'December';\par
+\par
+    // this is how to change subset colors //\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(128, 198, 0, 0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(128, 0, 198, 198);\par
+    Pego1.SubsetColors[2] := Pego1.PEargb(128, 198, 198, 0);\par
+    Pego1.SubsetColors[3] := Pego1.PEargb(128, 0, 198, 0);\par
+\par
+    // this is how to change line types //\par
+    Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[2] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[3] := PELT_MEDIUMSOLID;\par
+\par
+    // this is how to change point types //\par
+    Pego1.SubsetPointTypes[0] := PEPT_DOTSOLID;\par
+    Pego1.SubsetPointTypes[1] := PEPT_UPTRIANGLESOLID;\par
+    Pego1.SubsetPointTypes[2] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[3] := PEPT_DOWNTRIANGLESOLID;\par
+\par
+    // Various other features //\par
+    Pego1.FixedFonts := True;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gDarkNoBorder;\par
+\par
+    Pego1.SimpleLineLegend:=True;\par
+    Pego1.SimplePointLegend:=True;\par
+    Pego1.LegendStyle:=gOneLine;\par
+\par
+    Pego1.GradientBars := 8;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.SubTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.LineShadows := True;\par
+    Pego1.TextShadows := gShadowBoldText;\par
+    Pego1.FontSize := gLarge;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasText := True;\par
+    Pego1.AntiAliasGraphics := True;\par
+\par
+    // Always call PEactions := 0 at end //\par
+    Pego1.PEactions := gReinitAndReset;\par
+  end\par
+Else If nChart = 1 Then\par
+  Begin\par
+\par
+//*********************************************************************'\par
+//*********************************************************************'\par
+\{001  Graph With Auto Statistical Subsets\}\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Below tells object to automatically generate statistical\par
+    // comparison subsets, object will actually have\par
+    // 6 subsets when finished initializing.\par
+    Pego1.AutoStatSubsets[0] := PEAS_AVGAP;\par
+    Pego1.AutoStatSubsets[1] := PEAS_AVGPP;\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode:=True;\par
+    Pego1.QuickStyle:=gDarkLine;\par
+    Pego1.LegendStyle:=gInsideAxis;\par
+    Pego1.PlottingMethod:=gBar;\par
+    Pego1.PlottingMethodII:=gPointsPlusLine2;\par
+    Pego1.MarkDataPoints:=True;\par
+\par
+     End\par
+Else If nChart = 2 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{002  Graph With Permanent and Scrolling Subsets\}\par
+\par
+    //! Scroll vertical scroll bar to revolve subsets. //\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // tells object to automatically generate statistical //\par
+    // comparison subsets, the object will have\par
+    // 6 subsets when finished reinitializing. //\par
+    Pego1.AutoStatSubsets[0] := PEAS_AVGAP;  //This will be 5th subset //\par
+    Pego1.AutoStatSubsets[1] := PEAS_AVGPP;  //This will be 6th subset\par
+\par
+    // Since we are scrolling subsets one at a time,\par
+    // we can set the PEAS_AVGAP and PEAS_AVGPP subsets as\par
+    // permanent. This allows individual subsets to be\par
+    // compared to the averages of all points //\par
+    Pego1.RandomSubsetsToGraph[0] := 4;  // zero based 5th subset, PEAS_AVGAP //\par
+    Pego1.RandomSubsetsToGraph[1] := 5;  // zero based 6th subset, PEAS_AVGPP //\par
+\par
+    // If we comment this line out, you will only see the\par
+    // 5th and 6th subset selected above. RandomSubsetsToGraph\par
+    // will either control which subset you see or which\par
+    // subsets are permanent if ScrollingSubsets is non-zero. //\par
+    Pego1.ScrollingSubsets := 1;  // Scroll one subset at a time //\par
+\par
+    // Add a table //\par
+    Pego1.TableWhat := gAllSubsets;\par
+    Pego1.GraphPlusTable:=gGraphPlusTable;\par
+    Pego1.DataPrecision:=gNoDecimals;\par
+    Pego1.FontSize:=gMedium;\par
+\par
+    // Other various properties //\par
+    pego1.BitmapGradientMode:=True;\par
+    Pego1.QuickStyle:=gMedNoBorder;\par
+    Pego1.LegendStyle:=gInsideAxis;\par
+    Pego1.PlottingMethod:=gBar;\par
+    Pego1.PlottingMethodII:=gPointsPlusLine2;\par
+    Pego1.BestFitDegree:=gDegree4;\par
+    Pego1.MarkDataPoints:=True;\par
+    Pego1.LegendStyle:=gOneLine;\par
+    Pego1.DataShadows:=gWithThreeD;\par
+\par
+  End\par
+Else If nChart = 3 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{003  Graph With Right Y Axis Comparison Subsets\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Set PlottingMethod//\par
+    Pego1.PlottingMethod := gBar;\par
+\par
+    // Designate last 2 subsets as right y axis comparison subsets//\par
+    Pego1.RYAxisComparisonSubsets := 2;\par
+\par
+    // Set Comparison PlottingMethod\par
+    Pego1.PlottingMethodII:=gPointsPlusLine2;\par
+\par
+    // Label Right Y Axis //\par
+    Pego1.RYAxisLabel:='Expected';\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode:=True;\par
+    Pego1.QuickStyle:=gDarkNoBorder;\par
+    Pego1.SubsetColors[0]:=Pego1.PEargb(128, 100,0,0);\par
+    Pego1.SubsetColors[1]:=Pego1.PEargb(128, 0, 100, 100);\par
+    Pego1.SubsetColors[2]:=Pego1.PEargb(128, 198, 198, 0);\par
+    Pego1.SubsetColors[3]:=Pego1.PEargb(128, 0, 198, 0);\par
+\par
+  End\par
+Else If nChart = 4 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{004  Graph showing simple high-low-close\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Set PlottingMethod and SpecificPlotMode Type //\par
+    Pego1.PlottingMethod := gSpecificPlotMode;\par
+    Pego1.SpecificPlotMode := gHighLowClose;\par
+\par
+    // setting this true causes high-low-close to be multi colored//\par
+    Pego1.SpecificPlotModeColor := True;\par
+\par
+    // Set Subsets and Points //\par
+    Pego1.Subsets := 3;\par
+    Pego1.Points := 12;\par
+\par
+    // Pass YData, Line Start, Line End, and Close Value //\par
+    For s := 0 To 2 Do //3-1//\par
+    Begin\par
+        For p := 0 To 11 Do//11-1//\par
+        Begin\par
+            If s = 0 Then\par
+                Pego1.YData[s, p] := (p + 1) * 10 + (Random * 25)\par
+            Else If s = 1 Then\par
+                Pego1.YData[s, p] := (p + 1) * 40 + (Random * 25)\par
+            Else If s = 2 Then\par
+                Pego1.YData[s, p] := (p + 1) * 20 + (Random * 25)\par
+        End;\par
+    End;\par
+\par
+  End\par
+Else If nChart = 5 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*********************************************************************'//\par
+\{005  Graph With Custom Y Axis\}\par
+\par
+    // This creates the SimpleGraph example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Change to SplineArea //\par
+    Pego1.PlottingMethod := gSplineArea;\par
+\par
+    // Disable default scale //\par
+    Pego1.ShowYAxis := gEmpty;\par
+\par
+    // Generally, a custom y axis will need manual range control //\par
+    Pego1.ManualScaleControlY := gManualMinAndMax;\par
+    Pego1.ManualMinY := 0;\par
+    Pego1.ManualMaxY := 1500;\par
+\par
+    // reate custom grid lines with HorzLineAnnotations //\par
+    // Note that GridLineControl will control these annotations //\par
+    Pego1.HorzLineAnnotation[0] := 200;\par
+    Pego1.HorzLineAnnotationType[0] := PELAT_GRIDLINE;\par
+    Pego1.HorzLineAnnotationText[0] := '|LLow Value';\par
+\par
+    Pego1.HorzLineAnnotation[1] := 500;\par
+    Pego1.HorzLineAnnotationType[1] := PELAT_GRIDLINE;\par
+    Pego1.HorzLineAnnotationText[1] := '|LMedium Value';\par
+\par
+    Pego1.HorzLineAnnotation[2] := 800;\par
+    Pego1.HorzLineAnnotationType[2] := PELAT_GRIDLINE;\par
+    Pego1.HorzLineAnnotationText[2] := '|LHigh Value';\par
+\par
+    Pego1.HorzLineAnnotation[3] := 350;\par
+    Pego1.HorzLineAnnotationType[3] := PELAT_GRIDTICK;\par
+    Pego1.HorzLineAnnotationText[3] := '';\par
+\par
+    Pego1.HorzLineAnnotation[4] := 650;\par
+    Pego1.HorzLineAnnotationType[4] := PELAT_GRIDTICK;\par
+    Pego1.HorzLineAnnotationText[4] := '';\par
+\par
+    // Set LeftMargin to allocate space for line annotation text //\par
+    // Use the longest string used in annotations. //\par
+    Pego1.LeftMargin := 'Medium Value ';\par
+\par
+    // Set this to see annotations //\par
+    Pego1.ShowAnnotations := True;\par
+\par
+    // Increase line annotation text size //\par
+    Pego1.LineAnnotationTextSize := 100;\par
+\par
+    // Put Grid In Front of Bars //\par
+    Pego1.GridInFront := True;\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightInset;\par
+\par
+  End\par
+Else If nChart = 6 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*********************************************************************'//\par
+\{006  Graph showing use of Null Data Gaps\}\par
+\par
+    // This creates the SimpleGraph example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Change Null Data Value //\par
+    // Note that Scientific Graph has NullDataValueX and NullDataValueY //\par
+    Pego1.NullDataValue := -9999;\par
+\par
+    // Change to two subsets and set a few data points to nulls //\par
+    Pego1.Subsets := 2;\par
+\par
+    Pego1.YData[0, 3] := -9999;\par
+    Pego1.YData[0, 4] := -9999;\par
+    Pego1.YData[0, 5] := -9999;\par
+\par
+    Pego1.YData[1, 5] := -9999;  //! Note that [1,6] and [1,8] are valid points //\par
+    Pego1.YData[1, 7] := -9999;  //! You will see symbols for these points because //\par
+    Pego1.YData[1, 9] := -9999;  //! they are surrounded by nulls. //\par
+\par
+    // Set line Plotting Method //\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+\par
+    // Enable Null Data Gaps //\par
+    // Using NullDataGaps, the subset's line will stop before null data values //\par
+    // If this line is commented out, then line will extend to next non-null //\par
+    Pego1.NullDataGaps := True;\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gMedInset;\par
+    Pego1.MarkDataPoints := True;\par
+\par
+  End\par
+Else If nChart = 7 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{007  Graph showing use of PEconvpixeltograph\}\par
+\par
+    //! Look at TitleBar for the chart's window.  As you\par
+    //! move the mouse, you will see the coordinates of the\par
+    //! mouse in the titlebar.\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := eQuickStyle.gLightShadow;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+    Pego1.PlottingMethod := gPoint;\par
+\par
+    // Set last 1 subset to right y axis\par
+    Pego1.RYAxisComparisonSubsets := 1;\par
+    Pego1.PlottingMethodII := ePlottingMethodII.gLine2;\par
+\par
+    // Set cursor related properties\par
+    // v9 feature\par
+    Pego1.CursorPromptTracking := True;\par
+    Pego1.CursorPromptLocation := eCursorPromptLocation.gTooltip;\par
+    Pego1.CursorPromptStyle := eCursorPromptStyle.gXandYValue;\par
+    Pego1.TrackingCustomDataText := false;\par
+    Pego1.CursorMode := eCursorMode.gCrossHair;\par
+\par
+    // This will allow you to move cursor by clicking data point //\par
+    Pego1.MouseCursorControl := true;\par
+    Pego1.AllowDataHotSpots := true;\par
+\par
+    // No need to actually click data point, click close to the data point //\par
+    // v9 feature\par
+    Pego1.MouseCursorControlClosestPoint := true;\par
+\par
+    Pego1.TrackingTooltipMaxWidth := 250;\par
+\par
+    // Generally call ReinitializeResetImage at end **'\par
+    Pego1.PEactions := ePEactions.gReinitAndReset;\par
+\par
+\{\par
+    ////////////////////////////////////////////\par
+    // From MouseMove event of Pego control ////\par
+    ////////////////////////////////////////////\par
+\par
+    // get last mouse location within control //\par
+    PEvget(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // test to see if this is within grid area //\par
+    PEvget(Pego1.hObject, PEP_rectGRAPH, @r);\par
+    if (pt.x > r.left) And (pt.x < r.right) And (pt.y > r.top) And (pt.y < r.bottom) Then\par
+    begin\par
+        nA := 0;      // Initialize axis, non-zero only if using MultiAxesSubsets\par
+        nX := pt.x;   // Initialize nX and nY with mouse location\par
+        nY := pt.y;\par
+        t := PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+        s := FormatFloat('#.00', fX);\par
+        s2 := FormatFloat('#.00', fY);\par
+        Form2.Caption := s + '   -   ' + s2;\par
+    end\par
+    else\par
+        Form2.Caption := 'Outside Grid';\par
+\par
+    ///////////////////////////////////////\par
+    // From CustomTrackingDataText event //\par
+    ///////////////////////////////////////\par
+    Var\par
+        fX: Double;\par
+        fY: Double;\par
+        fRY: Double;\par
+        nA: Integer;\par
+        nX: Integer;\par
+        nY: Integer;\par
+        pt: TPoint;\par
+        r: TRect;\par
+        s : WideString;\par
+        s2 : WideString;\par
+        sY: Single;\par
+    begin\par
+      if (Pego1.TrackingPromptTrigger = eTrackingPromptTrigger.gMouseMove) then\par
+        // get last mouse location within control //\par
+        PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+        // test to see if this is within grid area //\par
+        PEvgetW(Pego1.hObject, PEP_rectGRAPH, @r);\par
+        if (pt.x > r.left) And (pt.x < r.right) And (pt.y > r.top) And (pt.y < r.bottom) Then\par
+        begin\par
+            nA := 0;      //Initialize axis, non-zero only if using MultiAxesSubsets//\par
+            nX := pt.x;   //Initialize nX and nY with mouse location//\par
+            nY := pt.y;\par
+            PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+            PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fRY, 1, 0, 0);\par
+\par
+            s := FormatFloat('#.00', fY);\par
+            s2 := FormatFloat('#.00', fRY);\par
+            Pego1.TrackingText := 'Left Y <- ' + s + '   ' + s2 + ' -> Right Y'\par
+        end\par
+      else\par
+      begin\par
+          // Not a MouseMove, must be a CursorMove trigger\par
+          sY := Pego1.YData[Pego1.CursorSubset, Pego1.CursorPoint];\par
+\par
+          if (Pego1.CursorSubset < 3) then\par
+          begin\par
+              Pego1.TrackingText := 'Left Y <- ' + FormatFloat('#.00', sY);\par
+          end\par
+          else\par
+          begin\par
+              Pego1.TrackingText := FormatFloat('#.00', sY) + ' -> Right Y';\par
+          end;\par
+      end;\par
+\}\par
+\par
+  End\par
+Else If nChart = 8 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{008  Graph showing use of PointColors\}\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+    //! Vertical scroll bar revolves through subsets. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Now to control color on per point basis, we use the\par
+    // PointColors property array to assign a color to each\par
+    // piece of YData.\par
+    For s := 0 To 3 Do\par
+    Begin\par
+        For p := 0 To 11 Do\par
+        Begin\par
+            If s = 0 Then\par
+                Pego1.PointColors[s, p] := Pego1.PEargb(128, 15 + ((p + 1) * 20), 0, 0)\par
+            Else If s = 1 Then\par
+                Pego1.PointColors[s, p] := Pego1.PEargb(128, 0, 15 + ((p + 1) * 20), 0)\par
+            Else If s = 2 Then\par
+                Pego1.PointColors[s, p] := Pego1.PEargb(128, 0, 0, 15 + ((p + 1) * 20))\par
+            Else If s = 3 Then\par
+                Pego1.PointColors[s, p] := Pego1.PEargb(128, 0, 15 + ((p + 1) * 20), 15 + ((p + 1) * 20))\par
+        End;\par
+    End;\par
+\par
+    // Set SubsetColor to match brightest PointColor for each subset //\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(55, 198, 0, 0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(55, 0, 198, 0);\par
+    Pego1.SubsetColors[2] := Pego1.PEargb(55, 0, 0, 198);\par
+    Pego1.SubsetColors[3] := Pego1.PEargb(55, 0, 198, 198);\par
+\par
+     // Show 1 subset at a time //\par
+    Pego1.ScrollingSubsets := 1;\par
+\par
+    Pego1.TableWhat := gAllSubsets;\par
+    Pego1.FontSize := gMedium;\par
+\par
+    // Add a table //\par
+    Pego1.GraphPlusTable := gGraphPlusTable;\par
+    Pego1.DataPrecision := gNoDecimals;\par
+\par
+    // Slant the Point Labels //\par
+    Pego1.ForceVerticalPoints := gSlanted;\par
+\par
+    Pego1.PlottingMethod := gBar;\par
+    Pego1.DataShadows := gWithThreeD;\par
+    Pego1.BarBevelStyle := gThickSmooth;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gDarkInset;\par
+\par
+\par
+  End\par
+Else If nChart = 9 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{009  Graph showing use of BestFitCoeffs\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Reduce to just two subsets //\par
+    Pego1.Subsets := 2;\par
+\par
+    // Set BestFitDegree and Plotting Method //\par
+    Pego1.BestFitDegree := gDegree3;   //3rd order //\par
+    Pego1.PlottingMethod := gPointsPlusBFC;\par
+\par
+    // Call PEreinitialize and PEresetimage //\par
+    Pego1.PEactions := gReinitialize;  // PEreinitialize can be used to determine ManualMaxY, etc //\par
+    Pego1.PEactions := gResetImage;    // PEresetimage is needed to calculate coeffs. //\par
+\par
+    // Now add annotations that represents coefficients //\par
+\par
+    // First subset's coeffs. //\par
+    t := 'Texas y := ' + FormatFloat('#.00', Pego1.BestFitCoeffs[0, 3]) + 'x^3 ';\par
+    If Pego1.BestFitCoeffs[0, 2] >= 0 Then t := t + '+ ';\par
+    t := t + FormatFloat('#.00', Pego1.BestFitCoeffs[0, 2]) + 'x^2 ';\par
+    If Pego1.BestFitCoeffs[0, 1] >= 0 Then t := t + '+ ';\par
+    t := t + FormatFloat('#.00', Pego1.BestFitCoeffs[0, 1]) + 'x ';\par
+    If Pego1.BestFitCoeffs[0, 0] >= 0 Then t := t + '+ ';\par
+    t := t + FormatFloat('#.00', Pego1.BestFitCoeffs[0, 0]);\par
+    t := t + Chr(10);  // Line feed //\par
+\par
+    // Second subset's coeffs. //\par
+    t := t + 'Florida y := ' + FormatFloat('#.00', Pego1.BestFitCoeffs[1, 3]) + 'x^3 ';\par
+    If Pego1.BestFitCoeffs[1, 2] >= 0 Then t := t + '+ ';\par
+    t := t + FormatFloat('#.00', Pego1.BestFitCoeffs[1, 2]) + 'x^2 ';\par
+    If Pego1.BestFitCoeffs[1, 1] >= 0 Then t := t + '+ ';\par
+    t := t + FormatFloat('#.00', Pego1.BestFitCoeffs[1, 1]) + 'x ';\par
+    If Pego1.BestFitCoeffs[1, 0] >= 0 Then t := t + '+ ';\par
+    t := t + FormatFloat('#.00', Pego1.BestFitCoeffs[1, 0]);\par
+\par
+    // Put text into a line annotations //\par
+    Pego1.HorzLineAnnotation[0] := Pego1.ManualMaxY - 1;\par
+    Pego1.HorzLineAnnotationType[0] := -1;  //no line, just text //\par
+    Pego1.HorzLineAnnotationText[0] := t;\par
+\par
+    Pego1.LineAnnotationTextSize := 100;\par
+    Pego1.ShowAnnotations := True;\par
+\par
+  End\par
+Else If nChart = 10 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{010  Graph showing Stacked Bar\}\par
+\par
+    //! Try this... Right Click chart and change the Plotting Method to Horizontal Bar Stacked. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Enable Stacked type charts //\par
+    Pego1.NoStackedData := False;\par
+    Pego1.AllowHorzBarStacked := True;\par
+\par
+    // Set plotting method //\par
+    Pego1.PlottingMethod := gBarStacked;\par
+\par
+    // Add a table //\par
+    Pego1.GraphPlusTable := gGraphPlusTable;\par
+    Pego1.DataPrecision := gTwoDecimals;\par
+\par
+  End\par
+Else If nChart = 11 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{011  Graph showing MultiSubTitles\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    //! Note that strings below always have two pipe symbols '|' //\par
+\par
+    // Set Multi Sub and Bottom Titles //\par
+    Pego1.MultiSubTitles[0] := 'Top Left|Top Center|Top Right';\par
+    Pego1.MultiSubTitles[1] := '|Second Line only centered|';\par
+\par
+    // Note that bottom titles get drawn from bottom up //\par
+    Pego1.MultiBottomTitles[0] := 'Second Line only on left||';\par
+    Pego1.MultiBottomTitles[1] := 'Bottom Left|Bottom Center|Bottom Right';\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightLine;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+  End\par
+Else If nChart = 12 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{012  Graph showing MultiAxesSubsets 1\}\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+    //! Left-Click and drag to draw zoom box. Use popup memu or 'z' to undo zoom. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Now sub-divide subsets 4 into individual axes //\par
+    Pego1.MultiAxesSubsets[0] := 1;\par
+    Pego1.MultiAxesSubsets[1] := 1;\par
+    Pego1.MultiAxesSubsets[2] := 1;\par
+    Pego1.MultiAxesSubsets[3] := 1;\par
+\par
+    // Set first axis parameters //\par
+    Pego1.WorkingAxis := 0;\par
+    Pego1.YAxisLabel := 'Label 1';\par
+    Pego1.PlottingMethod := gBar;\par
+\par
+    // Set second axis parameters //\par
+    Pego1.WorkingAxis := 1;\par
+    Pego1.YAxisLabel := 'Label 2';\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+\par
+    // Set third axis parameters //\par
+    Pego1.WorkingAxis := 2;\par
+    Pego1.YAxisLabel := 'Label 3';\par
+    Pego1.PlottingMethod := gBar;\par
+\par
+    // Set fourth axis parameters //\par
+    Pego1.WorkingAxis := 3;\par
+    Pego1.YAxisLabel := 'Label 4';\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+\par
+    // Reset WorkingAxis when done //\par
+    Pego1.WorkingAxis := 0;\par
+\par
+    // Add Axis Separator //\par
+    Pego1.MultiAxesSeparators := gThinLine;\par
+    Pego1.MultiAxesSizing := True;\par
+\par
+    // Get rid of 3d stuff //\par
+    Pego1.DataShadows := gNo3D;\par
+\par
+     // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gDarkNoBorder;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+    // v9.5\par
+    Pego1.AllowAnnotationControl := true;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+\par
+    for annot := 0 to 4 do\par
+    begin\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[0, nRndCol];\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Axis0 ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationAxis[aCnt] := 0;  // ie WorkingAxis index 0-15\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    for annot := 0 to 4 do\par
+    begin\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[1, nRndCol];\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Axis1 ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationAxis[aCnt] := 1;  // ie WorkingAxis index 0-15\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    for annot := 0 to 4 do\par
+    begin\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[2, nRndCol];\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Axis2 ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationAxis[aCnt] := 2;  // ie WorkingAxis index 0-15\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    for annot := 0 to 4 do\par
+    begin\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[3, nRndCol];\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Axis3 ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationAxis[aCnt] := 3;  // ie WorkingAxis index 0-15\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pego1.ShowAnnotations := true;\par
+    Pego1.GraphAnnotationSizeCntl := 0.7;\par
+    Pego1.GraphAnnotationTextSize := 105;\par
+    Pego1.MaximumSymbolSize := eMinimumPointSize.gLargeMPS;\par
+    Pego1.MinimumPointSize := eMinimumPointSize.gLargeMPS;\par
+\par
+\par
+  End\par
+Else If nChart = 13 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{013  Graph showing MultiAxesSubsets 2\}\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+    //! Left-Click and drag to draw zoom box. Use popup memu or 'z' to undo zoom. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Now sub-divide subsets 4 into individual axes //\par
+    Pego1.MultiAxesSubsets[0] := 2;\par
+    Pego1.MultiAxesSubsets[1] := 2;\par
+\par
+    // Set first axis parameters //\par
+    Pego1.WorkingAxis := 0;\par
+    Pego1.YAxisLabel := 'Label 1';\par
+    Pego1.PlottingMethod := gBar;\par
+    Pego1.PlottingMethodII := gPointsPlusLine2;\par
+    Pego1.ComparisonSubsets := 1;\par
+\par
+    // Set second axis parameters //\par
+    Pego1.WorkingAxis := 1;\par
+    Pego1.YAxisLabel := 'Label 2';\par
+    Pego1.PlottingMethod := gBar;\par
+    Pego1.PlottingMethodII := gPointsPlusLine2;\par
+    Pego1.ComparisonSubsets := 1;\par
+\par
+    // Reset WorkingAxis when done //\par
+    Pego1.WorkingAxis := 0;\par
+\par
+    // Separate Axes //\par
+    Pego1.MultiAxisStyle := gSeparateAxes;\par
+\par
+    // Axis Sizing //\par
+    Pego1.MultiAxesSizing := True;\par
+\par
+    // Legend Inside Each Axis //\par
+    Pego1.LegendStyle := gInsideAxis;\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightInset;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+    // v9.5\par
+    Pego1.AllowAnnotationControl := true;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+\par
+    for annot := 0 to 4 do\par
+    begin\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[0, nRndCol]; // subset 0\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Axis0 ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationAxis[aCnt] := 0;  // ie WorkingAxis index 0-15\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    for annot := 0 to 4 do\par
+    begin\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[2, nRndCol]; // subset 2\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Axis1 ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationAxis[aCnt] := 1;  // ie WorkingAxis index 0-15\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pego1.ShowAnnotations := true;\par
+    Pego1.GraphAnnotationSizeCntl := 0.7;\par
+    Pego1.GraphAnnotationTextSize := 105;\par
+    Pego1.MaximumSymbolSize := eMinimumPointSize.gLargeMPS;\par
+    Pego1.MinimumPointSize := eMinimumPointSize.gLargeMPS;\par
+    Pego1.AntiAliasGraphics := True;\par
+\par
+\par
+\par
+  End\par
+Else If nChart = 14 Then\par
+  Begin\par
+//*******************************************************************'\par
+//*******************************************************************//\par
+\{014  Graph showing use of PEgethotspot\}\par
+\par
+    //! Move mouse over subset legends, point labels, or data points\par
+    //! and watch title bar.\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Enable some various hot spots //\par
+    Pego1.AllowDataHotSpots := True;\par
+    Pego1.AllowSubsetHotSpots := True;\par
+    Pego1.AllowPointHotSpots := True;\par
+    Pego1.HotSpotSize := gLargeHotSpots;\par
+\par
+    Pego1.PlottingMethod := gPointsPlusSpline;\par
+    Pego1.ComparisonSubsets := 2;\par
+    Pego1.PlottingMethodII := gPointsPlusLine2;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+    Pego1.CursorPromptTracking := true;\par
+\par
+    ////////////////////////////////////////////\par
+    // Code below is found in MouseMove event //\par
+    ////////////////////////////////////////////\par
+\{\par
+    // hsd : HOTSPOTDATA     // Add to Var section\par
+\par
+    // get last mouse location within control //\par
+    PEvget(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pego1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    t := PEvget(Pego1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pego1.YData[hsd.n1, hsd.n2]);\par
+        s2 := 'DataPoint value ' + s;\par
+        Form2.Caption := s2;\par
+    end\par
+    else if (hsd.nHotSpotType = PEHS_SUBSET) Then\par
+    begin\par
+        s := 'Subset Legend is ' + Pego1.SubsetLabels[hsd.n1];\par
+        Form2.Caption := s;\par
+    end\par
+    else if (hsd.nHotSpotType = PEHS_POINT) Then\par
+    begin\par
+        s := 'Point Label is ' + Pego1.PointLabels[hsd.n1];\par
+        Form2.Caption := s;\par
+    end\par
+    else\par
+    begin\par
+        PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+        nResult := PEsearchsubsetpointindex(Pego1.hObject, pt.x, pt.y);\par
+        if (nResult <> 0) then\par
+        begin\par
+            s := 'Closest Subset Point s=' + IntToStr(Pego1.ClosestSubset);\par
+            s :=  s + ', p=' + IntToStr(Pego1.ClosestPoint);\par
+            Form2.Caption := s;\par
+        end\par
+        else\par
+            Form2.Caption := 'No Hot Spot';\par
+    end;\par
+\par
+\}\par
+\par
+  End\par
+Else If nChart = 15 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{015  Graph showing use of GraphAnnotations\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // v9.5\par
+    Pego1.AllowAnnotationControl := true;\par
+    Pego1.ShowAnnotationTextMenu := eMenuControl.gShowMenu;\par
+    Pego1.ShowAnnotationText := true;\par
+\par
+    // simplify chart by reducing subsets //\par
+    Pego1.Subsets := 2;\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+    Pego1.RYAxisComparisonSubsets := 1;\par
+    Pego1.PlottingMethodII := gLine2;\par
+\par
+    // no table //\par
+    Pego1.GraphPlusTable := gGraph;\par
+    Pego1.FontSize := gLarge;\par
+\par
+    // Add some various graph annotations //\par
+    Pego1.ShowAnnotations := True;\par
+    Pego1.GraphAnnotationTextSize := 115;\par
+\par
+    // place annotations in background //\par
+    Pego1.AnnotationsInFront := False;\par
+\par
+    // Give user ability to show or hide annotations //\par
+    Pego1.AllowAnnotationControl := True;\par
+\par
+    // Place a symbol //\par
+    Pego1.GraphAnnotationX[0] := 1.5;\par
+    Pego1.GraphAnnotationY[0] := 1095;\par
+    Pego1.GraphAnnotationType[0] := PEGAT_SMALLDOTSOLID;\par
+    Pego1.GraphAnnotationColor[0] := Pego1.PEargb(225, 198, 98, 0);\par
+    Pego1.GraphAnnotationText[0] := 'Dot Gradient Shadow';\par
+    Pego1.GraphAnnotationGradientStyle[0] := gVerticalAscentInversePG;\par
+    Pego1.GraphAnnotationShadow[0] := True;\par
+    Pego1.GraphAnnotationBold[0] := False;\par
+\par
+    // Draw some lines //\par
+    Pego1.GraphAnnotationX[1] := 1.5;\par
+    Pego1.GraphAnnotationY[1] := 1020;\par
+    Pego1.GraphAnnotationType[1] := PEGAT_THINSOLIDLINE;\par
+    Pego1.GraphAnnotationColor[1] := Pego1.PEargb(255, 0, 198, 198);\par
+    Pego1.GraphAnnotationText[1] := 'Start';\par
+    Pego1.GraphAnnotationBold[1] := False;\par
+\par
+    Pego1.GraphAnnotationX[2] := 2.5;\par
+    Pego1.GraphAnnotationY[2] := 1120;\par
+    Pego1.GraphAnnotationType[2] := PEGAT_LINECONTINUE;\par
+    Pego1.GraphAnnotationColor[2] := 0;\par
+    Pego1.GraphAnnotationText[2] := '';\par
+\par
+    Pego1.GraphAnnotationX[3] := 3.5;\par
+    Pego1.GraphAnnotationY[3] := 1020;\par
+    Pego1.GraphAnnotationType[3] := PEGAT_LINECONTINUE;\par
+    Pego1.GraphAnnotationColor[3] := Pego1.PEargb(255, 0, 0, 198);\par
+    Pego1.GraphAnnotationText[3] := 'End';\par
+    Pego1.GraphAnnotationBold[3] := False;\par
+\par
+    // How to draw an ellipse, rectangle, or roundrect. //\par
+    Pego1.GraphAnnotationX[4] := 4.5;\par
+    Pego1.GraphAnnotationY[4] := 1120;\par
+    Pego1.GraphAnnotationType[4] := PEGAT_TOPLEFT;\par
+    Pego1.GraphAnnotationColor[4] := 0;\par
+    Pego1.GraphAnnotationText[4] := '';\par
+    Pego1.GraphAnnotationInFront[4] := gAifInFront;\par
+    Pego1.GraphAnnotationShadow[4] := True;\par
+\par
+    Pego1.GraphAnnotationX[5] := 5.5;\par
+    Pego1.GraphAnnotationY[5] := 1020;\par
+    Pego1.GraphAnnotationType[5] := PEGAT_BOTTOMRIGHT;\par
+    Pego1.GraphAnnotationColor[5] := 0;\par
+    Pego1.GraphAnnotationText[5] := '';\par
+    Pego1.GraphAnnotationInFront[5] := gAifInFront;\par
+    Pego1.GraphAnnotationShadow[5] := True;\par
+\par
+    Pego1.GraphAnnotationX[6] := 5.5;\par
+    Pego1.GraphAnnotationY[6] := 1120;\par
+    Pego1.GraphAnnotationType[6] := PEGAT_ELLIPSE_FILL;\par
+    Pego1.GraphAnnotationColor[6] := Pego1.PEargb(155, 234, 123, 53);\par
+    Pego1.GraphAnnotationText[6] := '';\par
+    Pego1.GraphAnnotationInFront[6] := gAifInFront;\par
+    Pego1.GraphAnnotationShadow[6] := True;\par
+    Pego1.GraphAnnotationGradientStyle[6] := gVerticalAscentInversePG;\par
+\par
+    // Place a polygon //\par
+    Pego1.GraphAnnotationX[7] := 6.5;\par
+    Pego1.GraphAnnotationY[7] := 1120;\par
+    Pego1.GraphAnnotationType[7] := PEGAT_STARTPOLY;\par
+    Pego1.GraphAnnotationColor[7] := 0;\par
+    Pego1.GraphAnnotationText[7] := '';\par
+\par
+    Pego1.GraphAnnotationX[8] := 7.5;\par
+    Pego1.GraphAnnotationY[8] := 1120;\par
+    Pego1.GraphAnnotationType[8] := PEGAT_ADDPOLYPOINT;\par
+    Pego1.GraphAnnotationColor[8] := 0;\par
+    Pego1.GraphAnnotationText[8] := '';\par
+\par
+    Pego1.GraphAnnotationX[9] := 7.5;\par
+    Pego1.GraphAnnotationY[9] := 1020;\par
+    Pego1.GraphAnnotationType[9] := PEGAT_ENDPOLYGON;\par
+    Pego1.GraphAnnotationColor[9] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.GraphAnnotationText[9] := '';\par
+\par
+    // Place a paragraph of text //\par
+    Pego1.GraphAnnotationX[10] := 0;\par
+    Pego1.GraphAnnotationY[10] := 0;\par
+    Pego1.GraphAnnotationType[10] := PEGAT_STARTTEXT;\par
+    Pego1.GraphAnnotationColor[10] := 0;\par
+    Pego1.GraphAnnotationText[10] := 'A line of text.' + Chr(10);\par
+\par
+    Pego1.GraphAnnotationX[11] := 0;\par
+    Pego1.GraphAnnotationY[11] := 0;\par
+    Pego1.GraphAnnotationType[11] := PEGAT_ADDTEXT;\par
+    Pego1.GraphAnnotationColor[11] := 0;\par
+    Pego1.GraphAnnotationText[11] := 'Col1    Col2' + Chr(10);\par
+\par
+    Pego1.GraphAnnotationX[12] := 0;\par
+    Pego1.GraphAnnotationY[12] := 0;\par
+    Pego1.GraphAnnotationType[12] := PEGAT_ADDTEXT;\par
+    Pego1.GraphAnnotationColor[12] := 0;\par
+    Pego1.GraphAnnotationText[12] := 'on      off' + Chr(10);\par
+\par
+    Pego1.GraphAnnotationX[13] := 7.75;\par
+    Pego1.GraphAnnotationY[13] := 1050;\par
+    Pego1.GraphAnnotationType[13] := PEGAT_PARAGRAPH;\par
+    Pego1.GraphAnnotationColor[13] := Pego1.PEargb(255, 88, 88, 88);\par
+    Pego1.GraphAnnotationText[13] := '';\par
+    Pego1.GraphAnnotationFont[13] := 'Courier New';\par
+\par
+    // Draw an Arrow Pointer annotation //\par
+    Pego1.GraphAnnotationX[14] := 2.5;\par
+    Pego1.GraphAnnotationY[14] := 1130;\par
+    Pego1.GraphAnnotationType[14] := PEGAT_POINTER_ARROW_MEDIUM;\par
+    Pego1.GraphAnnotationColor[14] := Pego1.PEargb(255, 0, 198, 198);\par
+    Pego1.GraphAnnotationText[14] := 'Move toward Start';\par
+    Pego1.GraphAnnotationShadow[14] := True;\par
+\par
+    // Draw an Arrow annotation //\par
+    Pego1.GraphAnnotationX[15] := 1.5;\par
+    Pego1.GraphAnnotationY[15] := 1250;\par
+    Pego1.GraphAnnotationType[15] := PEGAT_THINSOLIDLINE;\par
+    Pego1.GraphAnnotationColor[15] := Pego1.PEargb(128, 128, 200, 198);\par
+    Pego1.GraphAnnotationText[15] := '';\par
+\par
+    Pego1.GraphAnnotationX[16] := 2.5;\par
+    Pego1.GraphAnnotationY[16] := 1290;\par
+    Pego1.GraphAnnotationType[16] := PEGAT_ARROWSOLID_SMALL;\par
+    Pego1.GraphAnnotationColor[16] := Pego1.PEargb(128, 128, 200, 198);\par
+    Pego1.GraphAnnotationText[16] := '';\par
+\par
+    // Place a symbol with respect to right y axis //\par
+    Pego1.GraphAnnotationX[17] := 11.5;\par
+    Pego1.GraphAnnotationY[17] := 900;\par
+    Pego1.GraphAnnotationType[17] := PEGAT_SMALLDOTSOLID + 1000;  // 1000 designates on right axis\par
+    Pego1.GraphAnnotationColor[17] := Pego1.PEargb(255, 88, 88, 88);\par
+    Pego1.GraphAnnotationText[17] := '900 Right Axis';\par
+    Pego1.GraphAnnotationGradientStyle[17] := gVerticalAscentInversePG;\par
+    Pego1.GraphAnnotationShadow[17] := True;\par
+\par
+    // Draw Angled Text Annotation //\par
+    Pego1.GraphAnnotationX[18] := 1.5;\par
+    Pego1.GraphAnnotationY[18] := 1250;\par
+    Pego1.GraphAnnotationType[18] := PEGAT_NULL_PEN;\par
+    Pego1.GraphAnnotationColor[18] := Pego1.PEargb(0, 0, 0, 0);\par
+    Pego1.GraphAnnotationText[18] := '';\par
+\par
+    Pego1.GraphAnnotationX[19] := 2.5;\par
+    Pego1.GraphAnnotationY[19] := 1290;\par
+    Pego1.GraphAnnotationType[19] := PEGAT_ANGLED_TEXT;\par
+    Pego1.GraphAnnotationColor[19] := Pego1.PEargb(255, 88, 88, 88);\par
+    Pego1.GraphAnnotationText[19] := 'Hello';\par
+\par
+    // Show annotations shadows //\par
+    Pego1.GraphAnnotationShadows := True;\par
+\par
+    // Allow user to move ArrowPointer annotation //\par
+    Pego1.GraphAnnotMoveable := gPointerMoveable;\par
+    Pego1.AllowGraphAnnotHotSpots := True;\par
+\par
+    // Other various properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gDarkInset;\par
+\par
+  End\par
+Else If nChart = 16 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{016  Graph showing date time handling\}\par
+\par
+   //! This examples shows Date/Time handling vith the Graph Object.\par
+   //! The Graph is suited to show discontinuous date/time scales.\par
+   //! Discontinuous for example, 8am to 5pm, Monday to Friday.\par
+\par
+   //! Here's a tip, when debugging your data-passing logic, use the\par
+   //! built-in text export feature to verify that data is as\par
+   //! expected.\par
+\par
+    // Enable Gestures //\par
+    Pego1.Touch.InteractiveGestures := [igZoom, igPan];\par
+    Pego1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable Mouse Wheel and Pinch Smoothing //\par
+    Pego1.MouseWheelZoomSmoothness := 5;\par
+    Pego1.PinchZoomSmoothness := 2;\par
+\par
+    Pego1.MouseWheelZoomFactor := 1.4;\par
+    Pego1.PinchZoomFactor := 1.15;\par
+\par
+    // Enable MouseWheel Zooming\par
+    Pego1.MouseWheelFunction := gMouseWheelHorzZoom;\par
+\par
+    // Enable ZoomWindow //\par
+    Pego1.ZoomWindow := True;\par
+\par
+    // Enable middle mouse dragging //\par
+    Pego1.MouseDraggingX := true;\par
+    Pego1.MouseDraggingY := true;\par
+\par
+    // Enable Plotting style bevel features //\par
+    Pego1.AreaBevelStyle := gThinSmooth;\par
+    Pego1.SplineBevelStyle := gThinSplineBevel;\par
+\par
+    Pego1.AreaBorder := 1;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    // Define how much data is in chart //\par
+    Pego1.Subsets := 2;\par
+    Pego1.Points := 60000;\par
+\par
+    // Set Date Time Handling related properties //\par
+    Pego1.DeltaX := 5;            // 5 minutes between data points //\par
+    Pego1.DeltasPerDay := 96;     // 96 data points in one day //\par
+\par
+    Pego1.StartTime := 0.333333333333;   //Start time, percentage of day //\par
+    Pego1.UsingXDataII := True;   //Using double precision x data, XDataII //\par
+\par
+    Pego1.YData[1, 59999] := 0;  // This allocates memory as below we incrementally add which is slow\par
+    Pego1.XDataII[0, 59999] := 0;\par
+\par
+    i := 0;\par
+    d := floor(Now) - 700;\par
+    For p := 0 To 59999 Do\par
+    Begin\par
+         Pego1.YData[0, p] := 55 + (Random * 55) + (sin(0.0003 *  p) * 500.0);\par
+         Pego1.YData[1, p] := 5 + (Random * 55) + (sin(0.003 *  p) * 400.0);\par
+\par
+         //! Make sure your XData is constructed so that every XData is\par
+         //! DeltaX apart and there are DeltasPerDay worth of data points\par
+         //! in each day. Well, at least for intraday data.  Daily/Weekly/Monthly\par
+         //! data is much easier to work with,\par
+\par
+         //! Also note that if you do not set XData, ProEssentials will\par
+         //! automatically construct your XData with respect to the\par
+         //! AutoXData, DeltaX, StartTime, and DeltasPerDay properties.\par
+\par
+         d2 := i;\par
+         Pego1.XDataII[0, p] := floor(d) + 0.33333333333 + (((d2 * 5.0000000000) / 60.000000000) / 24.00000000);\par
+\par
+         // every 5 minutes, 60 minutes in an hour, 24 hours in a day //\par
+\par
+         i := i + 1;\par
+         If (i >= 96) Then\par
+         Begin\par
+             i := 0;\par
+             d := d + 1;\par
+         End\par
+    End;\par
+\par
+    // This empties PointLabels array and invokes virtual point labels //\par
+    // which are the point number.\par
+    Pego1.PointLabels[-1] := '0';\par
+\par
+    // You can modify date label formats with //\par
+    Pego1.YearMonthDayPrompt := gInsideTopLabel;\par
+    // PEP_nTIMELABELTYPE\par
+    // PEP_nDAYLABELTYPE\par
+    // PEP_nMONTHLABELTYPE\par
+    // PEP_nYEARLABELTYPE\par
+\par
+    // Enable DateTimeMode //\par
+    Pego1.DateTimeMode := gVBDateTime;\par
+\par
+    // Enable Zooming, zoom the chart and see how structure\par
+    // of x axis changes as you zoom\par
+    Pego1.AllowZooming := gHorzZooming;\par
+\par
+    // Set various properties //\par
+    Pego1.PrepareImages := True;\par
+    Pego1.DeskColor := Pego1.PEargb(128, 192, 192, 192);\par
+    Pego1.DataShadows := gNo3D;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+\par
+    Pego1.FocalRect := False;\par
+    Pego1.FixedFonts := True;\par
+    Pego1.ZoomStyle := gRO2NOT;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightLine;\par
+\par
+    Pego1.GradientBars := 8;\par
+    Pego1.LineShadows := True;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.SubTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.TextShadows := gShadowBoldText;\par
+    Pego1.FontSize := gMedium;\par
+    Pego1.ScrollingScaleControl := True;\par
+\par
+    Pego1.PlottingMethod := gArea;\par
+    Pego1.SolidLineOverArea := 1;\par
+    Pego1.NoHiddenLinesInArea := True;\par
+\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(175,198,0,0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(85,0,0,198);\par
+\par
+    Pego1.SubsetGradientStyle[0] := gRadialTopLeftPG;\par
+    Pego1.SubsetGradientStyle[1] := gRadialBottomRightPG;\par
+\par
+    // export defaults //\par
+    Pego1.DpiX := 600;\par
+    Pego1.DpiY := 600;\par
+\par
+    Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+    Pego1.ExportTypeDef := gExportPng;\par
+    Pego1.ExportDestDef := gExportToClipboard;\par
+    Pego1.ExportUnitXDef := '1280';\par
+    Pego1.ExportUnitYDef := '768';\par
+    Pego1.ExportImageDpi := 300;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasGraphics := True;\par
+    Pego1.AntiAliasText := True;\par
+\par
+  End\par
+Else If nChart = 17 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{017  Graph showing real-time data handling\}\par
+\par
+    // No Shadows //\par
+    Pego1.DataShadows := gNo3D;\par
+\par
+    // No Flicker //\par
+    Pego1.PrepareImages := True;\par
+    Pego1.CacheBmp := True;\par
+\par
+    // Set Subsets and Points //\par
+    Pego1.Subsets := 2;\par
+    Pego1.Points := 200;\par
+\par
+    Pego1.PointsToGraph := 200;\par
+    Pego1.PointsToGraphInit := gLast; // Show Last Points Initially //\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+\par
+    // subset line types\par
+    Pego1.SubsetLineTypes[0] := PELT_THINSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_THINSOLID;\par
+\par
+    // subset point types\par
+    Pego1.SubsetPointTypes[0] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[1] := PEPT_PLUS;\par
+\par
+    // Not ideal for real-time, but nice for presentation/demonstration\par
+    Pego1.PointGradientStyle := gVerticalAscentInversePG;\par
+    Pego1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+\par
+    // Main Title\par
+    Pego1.MainTitle := 'Simple Graph Real Time';\par
+    Pego1.SubTitle := '';\par
+\par
+    // Manually configure scales //\par
+    Pego1.ManualScaleControlY := gManualMinAndMax;\par
+    Pego1.ManualMaxY := 100;\par
+    Pego1.ManualMinY := 1;\par
+    Pego1.ManualMaxDataString := '000.000';\par
+    Pego1.ManualMaxPointLabel := '00:00:00xx';\par
+\par
+    // Set various properties //\par
+    Pego1.NoStackedData := True;\par
+    Pego1.NoRandomPointsToGraph := True;\par
+    Pego1.AllowHistogram := False;\par
+    Pego1.FocalRect := False;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.DataPrecision := gOneDecimal;\par
+\par
+    // Needed to allocate point labels so append logic works //\par
+    // Set last point label, Points - 1 //\par
+    Pego1.PointLabels[199] := '';\par
+\par
+    // Clear out first four data points //\par
+    Pego1.YData[0, 0] := 0;\par
+    Pego1.YData[0, 1] := 0;\par
+    Pego1.YData[0, 2] := 0;\par
+    Pego1.YData[0, 3] := 0;\par
+\par
+    If (Pego1.IsDxAvailable = True) Then\par
+        Pego1.BitmapGradientMode := True\par
+    Else\par
+        Pego1.BitmapGradientMode := False;\par
+    Pego1.QuickStyle := gDarkNoBorder;\par
+\par
+    Pego1.FixedFonts := True;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.SubTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.TextShadows := gShadowBoldText;\par
+    Pego1.FontSize := gMedium;\par
+    Pego1.GridStyle := gDot;\par
+\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(128,0,198,0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(128,145,145,145);\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasGraphics := True;\par
+    Pego1.AntiAliasText := True;\par
+\par
+    // export defaults //\par
+    Pego1.DpiX := 600;\par
+    Pego1.DpiY := 600;\par
+\par
+    Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+    Pego1.ExportTypeDef := gExportPng;\par
+    Pego1.ExportDestDef := gExportToClipboard;\par
+    Pego1.ExportUnitXDef := '1280';\par
+    Pego1.ExportUnitYDef := '768';\par
+    Pego1.ExportImageDpi := 300;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    Pego1.PEactions := gReinitAndReset;\par
+\par
+    // Start Timer //\par
+    Timer1.Interval := 25;\par
+    Timer1.Enabled := True;\par
+\par
+    ////////////////////////////////////////////\par
+    // Find the code below in the timer event //\par
+    ////////////////////////////////////////////\par
+\{\par
+    CurrentTime : WideString;\par
+    szCurrentTime: Array[0..48] Of Char;\par
+    NewData : Array[0..2] Of Single;    // Be sure to add these to VAR\par
+\par
+    // new point label //\par
+    CurrentTime := TimeToStr(Time);\par
+    StrPCopy(szCurrentTime, CurrentTime);\par
+\par
+    // new YData //\par
+    // NewData: array[0..1] Of Single;  // add to Var section\par
+    NewData[0] := (Random * 20) + 2;\par
+    NewData[1] := (Random * 40) + 60;\par
+\par
+    // transfer new point label //\par
+    PEvset(Pego1.hObject, PEP_szaAPPENDPOINTLABELDATA, @szCurrentTime, 1);\par
+\par
+    // transfer new YData //\par
+    // this will also update and view new image //\par
+    PEvset(Pego1.hObject, PEP_faAPPENDYDATA, @NewData[0], 1);\par
+\}\par
+\par
+  End\par
+Else If nChart = 18 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{018  Graph showing use of PEvset\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Repass the data, this time with PEvset call //\par
+    // MyYData: array[0..48] Of Single;\par
+\par
+    For s := 0 To 3 Do\par
+    Begin\par
+        For p := 0 To 11 Do\par
+        Begin\par
+            o := (s * 12) + p;  // 12 := Points property //\par
+            MyYData[o] := 5 + (Random * 10);\par
+        End;\par
+    End;\par
+    PEvsetW(Pego1.hObject, PEP_faYDATA, @MyYData[0], 48);\par
+\par
+  End\par
+Else If nChart = 19 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{019  Graph showing large quantity of data\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Enable Gestures //\par
+    Pego1.Touch.InteractiveGestures := [igZoom, igPan];\par
+    Pego1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable Manipulation and Mouse Wheel Zoom Smoothing //\par
+    Pego1.MouseWheelZoomSmoothness := 4;\par
+    Pego1.PinchZoomSmoothness := 2;\par
+\par
+    Pego1.MouseWheelZoomFactor := 1.2;\par
+    Pego1.PinchZoomFactor := 1.1;\par
+\par
+    // Enable MouseWheel Zooming\par
+    Pego1.MouseWheelFunction := gMouseWheelHorzZoom;\par
+\par
+    // Disable some features not ideal for larger data sets.\par
+    Pego1.PointGradientStyle := gNoGradientPG;\par
+    Pego1.PointBorderColor := Pego1.PEargb(0, 0, 0, 0);\par
+    Pego1.LineSymbolThickness := 0;\par
+\par
+    // Enable ZoomWindow\par
+    Pego1.ZoomWindow := true;\par
+\par
+    // Repass the data, this time with PEvset call\par
+    // MyTempData: array[0..100000] of Single;\par
+    // pt: ^MyTempData;\par
+\par
+    Pego1.Subsets := 1;\par
+    Pego1.Points := 100000;\par
+\par
+    GetMem(pt, SizeOf(Single) * 100000);\par
+    For p := 0 To 99999 Do\par
+        pt^[p] := (Sin(0.0003 * p) * 500);\par
+\par
+    // Change some of the data so we can see some variations in data //\par
+    j := 0;\par
+    while j < 99999 Do\par
+    begin\par
+        For k := 0 To 4999 Do\par
+            pt^[j + k] := pt^[j +k] - 50 + (Random * 100);\par
+        j := j + 10000;\par
+    end;\par
+    PEvsetW(Pego1.hObject, PEP_faYDATA, @pt[0], 100000);\par
+    FreeMem(pt, SizeOf(Single) * 100000);\par
+\par
+    // This empties PointLabels array and invokes virtual point labels\par
+    // which are the point number.//\par
+    Pego1.PointLabels[-1] := '0';\par
+\par
+    // Set plotting method to line and allow zooming //\par
+    Pego1.PlottingMethod := gLine;\par
+    Pego1.AllowZooming := gHorzZooming;\par
+    Pego1.AllowPlotCustomization := False;\par
+\par
+    // This allows plotting of zero values //\par
+    Pego1.NullDataValue := -99999;\par
+\par
+    Pego1.SubsetLineTypes[0] := PELT_THINSOLID;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+    Pego1.BitmapGradientMode := False;\par
+    Pego1.QuickStyle := gLightShadow;\par
+    Pego1.DataShadows := gNo3D;\par
+    Pego1.AllowTextExport := false;\par
+    Pego1.AllowEmfExport := false;\par
+    Pego1.AllowWmfExport := false;\par
+    Pego1.AllowSvgExport := false;\par
+\par
+    if (Pego1.IsDxAvailable) then\par
+      Pego1.RenderEngine := gDirect3D\par
+    else\par
+      Pego1.RenderEngine := gHybrid;\par
+\par
+  End\par
+Else If nChart = 20 Then\par
+  Begin\par
+//*******************************************************************\par
+//*******************************************************************//\par
+\{020  Graph showing Real-Time PEpartialresetimage\}\par
+\par
+    //! Rarely needed but can help when application needs many charts, each with many points, all updating.\par
+\par
+    // No Flicker //\par
+    Pego1.PrepareImages := True;\par
+    PEgo1.CacheBmp := True;    //! Important for PEpartialresetimage to work.\par
+\par
+    Pego1.AutoImageReset := False;\par
+    PEgo1.SpeedBoost := 0;\par
+    Pego1.HourGlassThreshold := 40000;\par
+\par
+    // Set Subsets and Points //\par
+    Pego1.Subsets := 2;\par
+    Pego1.Points := 15000;\par
+\par
+    // Pass 80% of the  data, first one subset, then next subset //\par
+    GetMem(ptYD, SizeOf(Single) * 12000);\par
+\par
+    Randomize;\tab //seed for random data\par
+    for j:= 0 to 11999 do\par
+         ptYD[j] := (sin(0.003 *  j) * 500.0) + (Random * 50);\par
+\par
+    // Perform the actual transfer of data, first subset //\par
+    PEvsetEx(Pego1.hObject, PEP_faYDATA, 0, 12000, ptYD, Nil);\par
+\par
+    Randomize;\tab //seed for random data\par
+    for j:= 0 to 11999 do\par
+        ptYD[j] := (cos(0.003 *  j) * 500.0) + (Random * 50);\par
+\par
+    // Perform the actual transfer of data, second subset //\par
+    PEvsetEx(Pego1.hObject, PEP_faYDATA, 15000, 12000, ptYD, Nil);\par
+    FreeMem(ptYD, SizeOf(Single) * 12000);\par
+\par
+    Pego1.PointLabels[11999] := ' ';\par
+\par
+    for j:= 0 to 11999 do\par
+    begin\par
+        Pego1.PointLabels[j] :=  'Test ' + Format('%d',[(j+1)]);\par
+    end;\par
+\par
+    // // Set up two axes, just because it's easy ///\par
+    Pego1.MultiAxesSubsets[0] := 1;\par
+    Pego1.MultiAxesSubsets[1] := 1;\par
+    Pego1.MultiAxisStyle := gSeparateAxes;\par
+\par
+    // Manually configure top scale scale //\par
+    Pego1.WorkingAxis := 0;\par
+    Pego1.ManualScaleControlY := gManualMinAndMax;\par
+    Pego1.ManualMinY := -600.00;\par
+    Pego1.ManualMaxY := 600.00;\par
+\par
+    // Manually configure bottom scale scale //\par
+    Pego1.WorkingAxis := 1;\par
+    Pego1.ManualScaleControlY := gManualMinAndMax;\par
+    Pego1.ManualMinY := -600.00;\par
+    Pego1.ManualMaxY := 600.00;\par
+\par
+    // Real-Time related properties for Graph Objects //\par
+    Pego1.ManualMaxPointLabel := 'Test XXXXXXX';\par
+    Pego1.ManualMaxDataString := '12345';\par
+\par
+    // Set Various Other Properties //\par
+    Pego1.MainTitle := 'Graph Real Time Example';\par
+    Pego1.SubTitle := '';\par
+    Pego1.PlottingMethod := gLine;\par
+    Pego1.AllowCustomization := False;\par
+    Pego1.FocalRect := False;\par
+    Pego1.GridLineControl := gYAxis;\par
+    Pego1.DataPrecision := gOneDecimal;\par
+    Pego1.FixedFonts := True;\par
+    Pego1.FontSize := gMedium;\par
+\par
+    Pego1.SubsetLineTypes[0] := PELT_THINSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_THINSOLID;\par
+\par
+    Pego1.AllowZooming := gHorzPlusVertZooming;\par
+    Pego1.ZoomStyle := gFramed;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gDarkNoBorder;\par
+\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(255, 0,198,0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(255, 198,0,198);\par
+\par
+    Pego1.LegendStyle := gInsideAxis;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.MultiAxesSizing := True;\par
+    Pego1.BorderTypes := gInset;\par
+\par
+    // export defaults //\par
+    Pego1.DpiX := 600;\par
+    Pego1.DpiY := 600;\par
+\par
+    Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+    Pego1.ExportTypeDef := gExportPng;\par
+    Pego1.ExportDestDef := gExportToClipboard;\par
+    Pego1.ExportUnitXDef := '1280';\par
+    Pego1.ExportUnitYDef := '768';\par
+    Pego1.ExportImageDpi := 300;\par
+    Pego1.AllowTextExport := false;\par
+    Pego1.AllowEmfExport := false;\par
+    Pego1.AllowWmfExport := false;\par
+    Pego1.AllowSvgExport := false;\par
+\par
+    Pego1.RenderEngine := gHybrid;\par
+\par
+    m_nRealTimeCounter := 12000;\par
+    m_nSinCounter := 12000;\par
+\par
+    // Start Timer //\par
+    Timer1.Interval := 50;\par
+    Timer1.Enabled := True;\par
+\par
+    //////////////////////////////////////////////\par
+    //// Find the code below in the timer event //\par
+    //////////////////////////////////////////////\par
+\{\par
+    // Graph Real Time Feed using PEpartialresetimage //\par
+    if (m_nRealTimeCounter >= 15000) then\par
+    begin\par
+       // When we reach the end of our data, we shift 20% to the\par
+       // left and make room for another 3000 quick updates.\par
+       PEvset(Pego1.hObject, PEP_szaAPPENDPOINTLABELDATA, 0, 3000);\par
+       PEvset(Pego1.hObject, PEP_faAPPENDYDATA, 0, 3000);\par
+\par
+       // We need to perform a complete image update here.\par
+       Pego1.PEactions := gResetImage;\par
+       Pego1.PEactions := gInvalidateImage;\par
+       Pego1.Update;\par
+       m_nRealTimeCounter := 12000;\par
+    end;\par
+\par
+    // First Subset //\par
+    MyYD := (sin(0.003 *  m_nSinCounter) * 500.0);\par
+    Pego1.YData[0, m_nRealTimeCounter] := (sin(0.003 *  m_nSinCounter) * 500.0);\par
+\par
+    // Second Subset //\par
+    MyYD := (cos(0.003 *  m_nSinCounter) * 500.0);\par
+    Pego1.YData[1, m_nRealTimeCounter] := (cos(0.003 *  m_nSinCounter) * 500.0);\par
+\par
+    // Set an example string associated with data //\par
+    Pego1.PointLabels[m_nRealTimeCounter] :=  'Test ' + Format('%d',[m_nSinCounter]);\par
+\par
+    // This call performs a quick partial draw to an internal cached bmp.\par
+    result := PEpartialresetimage(Pego1.hObject, m_nRealTimeCounter, 1);\par
+\par
+    // Invalidate control, only invalidate vertical charting area and\par
+    // approximate horizontal location of new data added.\par
+\par
+    nA := 0;     // Initialize axis, non-zero only if using MultiAxesSubsets\par
+    fX := m_nRealTimeCounter - 5.0;   // Approximate horizontal location\par
+    fY := 0;     // not important, we will user vertical extents from PEP_rectGRAPH\par
+\par
+    // This call finds pixel location for fX and fY graph coordinates.\par
+    PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 1);\par
+\par
+    PEvget(Pego1.hObject, PEP_rectGRAPH, @r); // get vertical extents of charting area.\par
+    r.left := nX;\par
+    r.right := nX + 50; // 50 pixels close to new data location\par
+\par
+    // For comparison purposes, you can uncomment the line below //\par
+    // Calling PEresetimage with each timer event causes CPU usage to go to 100%\par
+    // PEpartialresetimage allows the same visual output while using 2% or less of the CPU\par
+    // Pego1.Peactions := epeactions(0);\par
+\par
+    InvalidateRect(Pego1.HANDLE, @r, FALSE);\par
+\par
+    m_nRealTimeCounter := m_nRealTimeCounter + 1;\par
+    m_nSinCounter := m_nSinCounter + 1;\par
+\}\par
+\par
+  End\par
+Else If nChart = 21 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{021  Graph Showing Hatching\}\par
+\par
+   // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+   CreateSimpleGraph;\par
+\par
+   Pego1.SubsetHatch[0] := gBDiagonalHatch;\par
+   Pego1.SubsetHatch[1] := gCrossHatch;\par
+   Pego1.SubsetHatch[2] := gDiagonalCrossHatch;\par
+   Pego1.SubsetHatch[3] := gFDiagonalHatch;\par
+\par
+   // Set Other Various Properties ///\par
+   Pego1.BitmapGradientMode := True;\par
+   Pego1.QuickStyle := gDarkNoBorder;\par
+   Pego1.BorderTypes := gSingleLine;\par
+\par
+   // Enable Stacked type charts //\par
+   Pego1.NoStackedData := False;\par
+\par
+   // Set plotting method //\par
+   Pego1.PlottingMethod := gBarStacked;\par
+   Pego1.HatchBackColor := Pego1.PEargb(25,0,0,0);\par
+   Pego1.DataShadows := gNo3D;\par
+   Pego1.BarGlassEffect := False;\par
+\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(228, 198,0,0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(228, 0,198,198);\par
+    Pego1.SubsetColors[2] := Pego1.PEargb(228, 198,138,0);\par
+    Pego1.SubsetColors[3] := Pego1.PEargb(228, 0,198,0);\par
+\par
+   // Add a table //\par
+   PEgo1.GraphPlusTable := gGraphPlusTable;\par
+   Pego1.DataPrecision := gNoDecimals;\par
+\par
+End\par
+Else If nChart = 22 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{022  Graph Showing various plotting methods\}\par
+\par
+   //! This is a new method of setting plotting methods in version 4 //\par
+\par
+   // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+   CreateSimpleGraph;\par
+\par
+   // Set plotting method per subset //\par
+   Pego1.PlottingMethods[0] := PEGPM_HIGHLOWAREA;\par
+   Pego1.PlottingMethods[1] := PEGPM_HIGHLOWAREA;\par
+   Pego1.PlottingMethods[2] := PEGPM_LINE;\par
+   Pego1.PlottingMethods[3] := PEGPM_BAR;\par
+\par
+    // Set Subset Labels for High Low //\par
+    Pego1.SubsetLabels[0] := 'High';\par
+    Pego1.SubsetLabels[1] := 'Low';\par
+\par
+   // Set Other Various Properties ///\par
+   Pego1.BitmapGradientMode := True;\par
+   Pego1.QuickStyle := gLightLine;\par
+   Pego1.PlotMethodMenu := gHideMenu;\par
+\par
+   // Make the line types bold //\par
+   Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+   Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+   Pego1.SubsetLineTypes[2] := PELT_THICKDOT;\par
+\par
+   // Change the Bar's color //\par
+   Pego1.SubsetColors[3] := Pego1.PEargb(32, 0,0,150);\par
+\par
+   // Add a table //\par
+   Pego1.GraphPlusTable := gGraphPlusTable;\par
+   Pego1.DataPrecision := gNoDecimals;\par
+\par
+\par
+End\par
+Else If nChart = 23 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{023  Graph Showing Bitmap background\}\par
+\par
+   //! Top image is top left justified. //\par
+   //! Bottom image is StretchBlt'ed within axis area. //\par
+   //! Click bottom of top axis and drag to resize axes. //\par
+\par
+   // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+   CreateSimpleGraph;\par
+\par
+   Pego1.BitmapGradientMode := True;\par
+   PEgo1.DeskColor := 1;\par
+   Pego1.DeskGradientStart := Pego1.PEargb(255,0,0,110);\par
+   Pego1.DeskGradientEnd := Pego1.PEargb(255,0,0,220);\par
+   Pego1.DeskGradientStyle := gVerticalGradient;\par
+   Pego1.DeskBmpFilename := 'gigasoft.jpg';\par
+   Pego1.DeskBmpStyle := gBitBltTopRight;\par
+\par
+   // Now sub-divide subsets into 2 individual axes //\par
+   // Each axis with a bitmap //\par
+   Pego1.Subsets := 2;\par
+   Pego1.MultiAxesSubsets[0] := 1;\par
+   Pego1.MultiAxesSubsets[1] := 1;\par
+\par
+   // Set first axis parameters //\par
+   Pego1.WorkingAxis := 0;\par
+   Pego1.GraphBackColor := 1;\par
+   Pego1.GraphBmpFilename := 'darkcir.jpg';\par
+   Pego1.GraphBmpStyle := gTiledBlt;\par
+   Pego1.YAxisLabel := 'Research';\par
+   Pego1.SubsetLabels[0] := 'Research';\par
+   Pego1.PlottingMethod := gPointsPlusSpline;\par
+\par
+   // Set second axis parameters //\par
+   Pego1.WorkingAxis := 1;\par
+   Pego1.GraphBackColor := 1;\par
+   Pego1.GraphBmpFilename := 'demo2.png';\par
+   Pego1.GraphBmpStyle := gStretchBlt;\par
+   Pego1.YAxisLabel := 'Reward';\par
+   Pego1.SubsetLabels[1] := 'Reward';\par
+   Pego1.PlottingMethod := gPointsPlusSpline;\par
+\par
+   // Reset WorkingAxis when done //\par
+   Pego1.WorkingAxis := 0;\par
+\par
+   // Set Various Other Properties //\par
+   Pego1.MainTitle := '';\par
+   Pego1.SubTitle := '';\par
+\par
+   Pego1.ImageAdjustTop := 650;\par
+   Pego1.ImageAdjustRight := 100;\par
+   Pego1.ImageAdjustLeft := 100;\par
+   Pego1.ImageAdjustBottom := 100;\par
+\par
+   Pego1.TickColor := 1;\par
+   Pego1.DataShadows := gWithThreeD;\par
+   Pego1.GraphForeColor := Pego1.PEargb(255, 128,128,128);\par
+\par
+   // Make the line types bold //\par
+   Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+   Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+   Pego1.SubsetLineTypes[2] := PELT_MEDIUMSOLID;\par
+   Pego1.SubsetLineTypes[3] := PELT_MEDIUMSOLID;\par
+\par
+   Pego1.MultiAxisStyle := gSeparateAxes;\par
+   Pego1.MultiAxesSizing := True;\par
+\par
+   Pego1.FontSize := gLarge;\par
+\par
+End\par
+Else If nChart = 24 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{024  Graph Showing background bitmap\}\par
+\par
+    //! Click bottom of top axis and drag to resize axes. //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    PEgo1.DeskColor := 1;\par
+    Pego1.DeskBmpStyle := gTiledBlt;\par
+    Pego1.DeskBmpFilename := 'cloud.jpg';\par
+    Pego1.GraphForeColor := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TextColor := Pego1.PEargb(255, 0, 0, 0);\par
+\par
+    // Now sub-divide subsets into 2 axes //\par
+    // Each axis to be transarent //\par
+    Pego1.MultiAxesSubsets[0] := 2;\par
+    Pego1.MultiAxesSubsets[1] := 2;\par
+    Pego1.LegendStyle := gInsideAxis;\par
+    Pego1.MultiAxesSizing := True;\par
+\par
+    // Set first axis parameters //\par
+    Pego1.WorkingAxis := 0;\par
+    Pego1.YAxisLabel := '';\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+    Pego1.GraphBackColor := 1;\par
+    Pego1.GraphGradientStyle := gNoGradient;\par
+\par
+    // Set second axis parameters //\par
+    Pego1.WorkingAxis := 1;\par
+    Pego1.YAxisLabel := '';\par
+    Pego1.PlottingMethod := gBar;\par
+    Pego1.GraphBackColor := 1;\par
+    Pego1.GraphGradientStyle := gNoGradient;\par
+\par
+    // Reset WorkingAxis when done //\par
+    Pego1.WorkingAxis := 0;\par
+\par
+    // Set Various Other Properties //\par
+    Pego1.MainTitle := '';\par
+    Pego1.SubTitle := '';\par
+    Pego1.MultiAxisStyle := gSeparateAxes;\par
+\par
+    Pego1.TickColor := 1;\par
+    Pego1.DataShadows := gWithThreeD;\par
+    Pego1.FixedFonts := True;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.BorderTypes := gNoBorder;\par
+    Pego1.PointSize := gLargePoints;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.GridStyle := gDot;\par
+\par
+    // Make the line types bold //\par
+    Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[2] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[3] := PELT_MEDIUMSOLID;\par
+\par
+    Pego1.ImageAdjustTop := 100;\par
+    Pego1.ImageAdjustLeft := 100;\par
+    Pego1.ImageAdjustRight := 100;\par
+    Pego1.ImageAdjustBottom := 100;\par
+\par
+    Pego1.GraphPlusTable := gGraph;\par
+\par
+End\par
+Else If nChart = 25 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{025  Graph Showing floating stacked bar\}\par
+\par
+   //! Try this... Right Click chart and change the Plotting Method to Horizontal Bar Stacked. //\par
+\par
+   // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+   CreateSimpleGraph;\par
+\par
+   // Enable Stacked type charts //\par
+   Pego1.NoStackedData := False;\par
+   Pego1.AllowHorzBarStacked := True;\par
+\par
+   // Set plotting method //\par
+   Pego1.PlottingMethod  := gBarStacked;\par
+\par
+   // Floating stacked Bars are constructed by setting ZData //\par
+   //var MyZData: array[0..12] Of Single;     // Only need 12 pieces of ZData because PEP_nPOINTS = 12\par
+\par
+   Randomize;\tab //seed for random data\par
+   For j := 0 to 11  Do\par
+       MyZData[j] := abs(sin((0.3 *  j)) * 800.0) + 400;\par
+\par
+   // Perform the actual transfer of data, first subset //\par
+   PEvsetW(Pego1.hObject , PEP_faZDATA, @MyZData[0], 12);\par
+\par
+   // Enable floating stacked bar feature //\par
+   Pego1.FloatingStackedBars := True;\par
+\par
+   // Set Various Other Properties ///\par
+   Pego1.BitmapGradientMode := True;\par
+   Pego1.QuickStyle := gLightShadow;\par
+   PEgo1.GridLineControl := gYPlusXAxis;\par
+   Pego1.GridStyle := gDot;\par
+   Pego1.GraphPlusTable := gGraphPlusTable;\par
+   Pego1.GridInFront := True;\par
+   Pego1.DataPrecision := gNoDecimals;\par
+   Pego1.DataShadows := gWithThreeD;\par
+\par
+End\par
+Else If nChart = 26 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{026  Graph Showing a simple table annotation\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Construct a simple table annotation //\par
+    Pego1.WorkingTable := 0;\par
+    Pego1.TARows := 4;\par
+    Pego1.TAColumns := 7;\par
+    Pego1.TATextSize := 85;\par
+\par
+    // Pass the table text //\par
+    Pego1.TAText[1,0] := ' 1 ';\par
+    Pego1.TAText[2,0] := ' 2 ';\par
+    Pego1.TAText[3,0] := ' 3 ';\par
+\par
+    Pego1.TAText[0,1] := 'Try not  ';\par
+    Pego1.TAText[0,2] := '... ';\par
+    Pego1.TAText[0,3] := 'Do ';\par
+    Pego1.TAText[0,4] := '... ';\par
+    Pego1.TAText[0,5] := 'or ';\par
+    Pego1.TAText[0,6] := 'Do not ';\par
+\par
+    For r := 1 to 3 Do\par
+    Begin\par
+        For c := 1 to 6  Do\par
+        Begin\par
+            Pego1.TAText[r,c] :=  FormatFloat('#0.0000', ((sin(0.3 *  c + 1) * 500.0) + (Random* 50)));\par
+            Pego1.TAColor[r,c] := Pego1.PEargb(255,0,0,0);\par
+        End;\par
+    End;\par
+\par
+    // Other Table Related Properties ///\par
+    PEgo1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsideTopLeft;\par
+    Pego1.TABackColor :=Pego1.PEargb(5,150,150,150);\par
+    Pego1.TAGradientStyle := gVerticalPG;//.gVerticalAscentPG;\par
+    Pego1.TAGradientColor := Pego1.PEargb(255, 255, 255, 255);\par
+    Pego1.TABevelStyle := gThinSmooth;\par
+    Pego1.TABorders := gNoBorder;\par
+    Pego1.TAHeaderRows := 1;\par
+    PEgo1.TAHeaderColumn := True;\par
+\par
+    // Construct a second simple table annotation //\par
+    Pego1.WorkingTable := 1; // Note WorkingTable goes to 1\par
+    Pego1.TARows := 15;\par
+    PEgo1.TAColumns := 2;\par
+\par
+    // Pass the table text //\par
+    Pego1.TAText[0,0] :=  '';\par
+    Pego1.TAText[0,1] :=  'Data';\par
+    Pego1.TAJustification[0,0] := gCenterJustification;\par
+    Pego1.TAJustification[0,1] := gCenterJustification;\par
+\par
+    // First Column Text //\par
+    For r := 1 to 15 Do\par
+        Pego1.TAText[r,0] := Format('%2d', [r]);\par
+\par
+    // Second Column Text //\par
+    For r := 1 to 15 Do\par
+    Begin\par
+        fp :=  (sin(0.3 * r + 1) * 500.0) + (Random * 50);\par
+        Pego1.TAText[r,1] := FormatFloat('#0.00', fp);\par
+    End;\par
+\par
+    // Other Table Related Properties ///\par
+    Pego1.ShowTableAnnotation := True;\par
+    PEgo1.TALocation := gLeftCenterDesk;\par
+    Pego1.TABackColor := Pego1.PEargb(50,255,255,255);\par
+    Pego1.TABevelStyle := gThinSmooth;\par
+    Pego1.TABorders := gNoBorder;\par
+\par
+    Pego1.TAHeaderRows := 1;\par
+    PEgo1.TAHeaderColumn := True;\par
+\par
+    // Done setting Table Annotations ///\par
+\par
+    // Set Various Other Properties ///\par
+    Pego1.BitmapGradientMode := True;\par
+    PEgo1.QuickStyle := gLightNoBorder;\par
+    Pego1.DataPrecision := gNoDecimals;\par
+\par
+    Pego1.GridInFront := True;\par
+    Pego1.PlottingMethod := gPointsPlusSpline;\par
+\par
+End\par
+Else If nChart = 27 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{027  Graph Showing Stacked Table Annotations\}\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    /////////////////////////////////////////////\par
+    // Construct a simple table annotation //\par
+    /////////////////////////////////////////////\par
+    Pego1.WorkingTable := 0;\par
+    Pego1.TARows := 1;\par
+    Pego1.TAColumns := 2;\par
+    Pego1.TATextSize := 85;\par
+\par
+    // Pass the table text //\par
+    Pego1.TAText[0,0] := 'Category 1';\par
+    Pego1.TAText[0,1] := 'Category 2';\par
+\par
+    // Set column widths ///\par
+    Pego1.TAColumnWidth[0] := 28;\par
+    Pego1.TAColumnWidth[1] := 28;\par
+    Pego1.TAJustification[0,0] := gCenterJustification;\par
+    Pego1.TAJustification[0,1] := gCenterJustification;\par
+\par
+    Pego1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsideAxis0;\par
+    PEgo1.TAAxisLocation := gTopLeftAxis;\par
+    Pego1.TABorders := gSingleLine;\par
+    Pego1.TABackColor := Pego1.PEargb(55, 255,255,255);\par
+    Pego1.TAGradientStyle := gVerticalPG;\par
+\par
+    /////////////////////////////////////////\par
+    // Construct a simple table annotation //\par
+    /////////////////////////////////////////\par
+    Pego1.WorkingTable := 1;\par
+    Pego1.TARows := 1;\par
+    Pego1.TAColumns := 4;\par
+    Pego1.TATextSize := 85;\par
+\par
+    Pego1.TAText[0,0] :=  'Sub Cat 1';\par
+    Pego1.TAText[0,1] :=  'Sub Cat 2';\par
+    Pego1.TAText[0,2] :=  'Sub Cat 3';\par
+    Pego1.TAText[0,3] :=  'Sub Cat 4';\par
+\par
+    Pego1.TAColumnWidth[0] := 14;\par
+    Pego1.TAColumnWidth[1] := 14;\par
+    Pego1.TAColumnWidth[2] := 14;\par
+    Pego1.TAColumnWidth[3] := 14;\par
+\par
+    Pego1.TAJustification[0,0] := gCenterJustification;\par
+    Pego1.TAJustification[1,0] := gCenterJustification;\par
+    Pego1.TAJustification[2,0] := gCenterJustification;\par
+    Pego1.TAJustification[3,0] := gCenterJustification;\par
+\par
+    Pego1.TABackColor := Pego1.PEargb(55,240,240,240);\par
+    Pego1.TAGradientStyle := gVerticalPG;\par
+\par
+    Pego1.ShowTableAnnotation := True;\par
+\par
+    Pego1.TALocation := gInsideAxis0;\par
+    PEnset(Pego1.hObject , PEP_nTAAXISLOCATION, PETAAL_TOP_LEFT + PETAAL_NEW_ROW);\par
+\par
+    Pego1.TABorders := gSingleLine;\par
+\par
+    /////////////////////////////////////////\par
+    // Construct a simple table annotation //\par
+    /////////////////////////////////////////\par
+    Pego1.WorkingTable := 2;\par
+    Pego1.TARows := 4;\par
+    Pego1.TAColumns := 8;\par
+    Pego1.TATextSize := 85;\par
+\par
+    // Set Column Widths //\par
+    Pego1.TAColumnWidth[0] := 7;\par
+    Pego1.TAColumnWidth[1] := 7;\par
+    Pego1.TAColumnWidth[2] := 7;\par
+    Pego1.TAColumnWidth[3] := 7;\par
+    Pego1.TAColumnWidth[4] := 7;\par
+    Pego1.TAColumnWidth[5] := 7;\par
+    Pego1.TAColumnWidth[6] := 7;\par
+    Pego1.TAColumnWidth[7] := 7;\par
+\par
+    // Pass the table text //\par
+    For r := 0 To 3 Do\par
+    Begin\par
+        For c := 0 To 7 Do\par
+        Begin\par
+            fp := (sin(0.3 * c + 1) * 500.0) + (Random * 50);\par
+            Pego1.TAText[r,c] := Format('%.2f', [fp]);\par
+\par
+            if (c > 5)  Then\par
+                Pego1.tacolor[r,c] := Pego1.PEargb(255, 0, 148, 0);\par
+            if (c > 3)  Then\par
+                Pego1.tacolor[r,c] := Pego1.PEargb(255, 148, 148, 0);\par
+            if (c > 1)  Then\par
+               Pego1.tacolor[r,c] := Pego1.PEargb(255, 0, 148, 148)\par
+            else\par
+               Pego1.tacolor[r,c] := Pego1.PEargb(255, 198, 0, 0);\par
+            Pego1.tajustification[r,c] := gCenterJustification;\par
+        End;\par
+    End;\par
+\par
+    // Other Table Related Properties //\par
+    PEgo1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsideAxis0;\par
+    PEnset(Pego1.hObject, PEP_nTAAXISLOCATION, PETAAL_TOP_LEFT + PETAAL_NEW_ROW + PETAAL_NEW_ROW);\par
+    Pego1.TABorders := gSingleLine;\par
+    Pego1.TABackColor := Pego1.PEargb(255, 200,200,200);\par
+\par
+    // Done setting Table Annotations //\par
+\par
+    // Set Various Other Properties //\par
+    PEgo1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightInset;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.DataPrecision := gNoDecimals;\par
+    Pego1.AxisNumberSpacing := 1.5;\par
+\par
+    Pego1.PlottingMethod := gBar;\par
+    Pego1.BarGlassEffect := False;\par
+    Pego1.DataShadows := gWithThreeD;\par
+\par
+End\par
+Else If nChart = 28 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{028  Graph Showing Table Annotations, Real-time\}\par
+\par
+    //! Move mouse over chart to see tables update //\par
+\par
+    // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+    CreateSimpleGraph;\par
+\par
+    // Construct a simple table annotation //\par
+    Pego1.WorkingTable := 0;\par
+    Pego1.TARows := 1;\par
+    Pego1.TAColumns := 6;\par
+\par
+    // column index for table with 6 columns //\par
+    // 0 = symbol, no default width\par
+    // 1 = text, subset label, no default width\par
+    // 2 = text, data value, default width set to 7 characters\par
+    // 3 = symbol second subset, no default width\par
+    // 4 = text, second subset label, no default width\par
+    // 5 = text, second data value, default width set to 7 characters\par
+\par
+    // Pass the table type, text, color //\par
+    Pego1.TAType[0,0] := PEGAT_SQUARESOLID;\par
+    Pego1.TAColor[0,0] := Pego1.PEargb(255, 198, 0, 0);\par
+    Pego1.TAText[0,1] := 'Texas';\par
+    Pego1.TAColor[0,1] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TAColor[0,2] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TAType[0,3] := PEGAT_SQUARESOLID;\par
+    Pego1.TAColor[0,3] := Pego1.PEargb(255, 0, 198, 198);\par
+    Pego1.TAText[0,4] := 'Florida';\par
+    Pego1.TAColor[0,4] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TAColor[0,5] := Pego1.PEargb(255, 0, 0, 0);\par
+\par
+    Pego1.TAColumnWidth[0] := 2;\par
+    Pego1.TAColumnWidth[1] := 8;\par
+    Pego1.TAColumnWidth[2] := 7;\par
+    Pego1.TAColumnWidth[3] := 2;\par
+    Pego1.TAColumnWidth[4] := 8;\par
+    Pego1.TAColumnWidth[5] := 7;\par
+\par
+    // Other Table Related Properties ///\par
+    Pego1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsideAxis0;\par
+    Pego1.TALocation := gInsideTopLeft;\par
+    Pego1.TABackColor := Pego1.PEargb(255,55,155,198);\par
+    Pego1.TABorders := gInset;\par
+\par
+    // Construct another table annotation //\par
+    Pego1.WorkingTable := 1;\par
+    Pego1.TARows := 1;\par
+    Pego1.TAColumns := 6;\par
+\par
+    // Pass the table type, text, color //\par
+    Pego1.TAType[0,0] := PEGAT_SQUARESOLID;\par
+    Pego1.TAColor[0,0] := Pego1.PEargb(255, 198, 198, 0);\par
+    Pego1.TAText[0,1] := 'New York';\par
+    Pego1.TAColor[0,1] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TAColor[0,2] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TAType[0,3] := PEGAT_SQUARESOLID;\par
+    Pego1.TAColor[0,3] := Pego1.PEargb(255, 0, 198, 0);\par
+    Pego1.TAText[0,4] := 'California';\par
+    Pego1.TAColor[0,4] := Pego1.PEargb(255, 0, 0, 0);\par
+    Pego1.TAColor[0,5] := Pego1.PEargb(255, 0, 0, 0);\par
+\par
+    Pego1.TAColumnWidth[0] := 2;\par
+    Pego1.TAColumnWidth[1] := 8;\par
+    Pego1.TAColumnWidth[2] := 7;\par
+    Pego1.TAColumnWidth[3] := 2;\par
+    Pego1.TAColumnWidth[4] := 8;\par
+    Pego1.TAColumnWidth[5] := 7;\par
+\par
+    // Other Table Related Properties //\par
+    Pego1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsideAxis1;\par
+    PEgo1.TAAxisLocation := gTopLeftAxis;\par
+    Pego1.TABackColor := Pego1.PEargb(255,55,155,198);\par
+    Pego1.TABorders := gInset;\par
+    Pego1.WorkingTable := 0;\par
+\par
+    // Other various Properties //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightShadow;\par
+\par
+    Pego1.MultiAxesSubsets[0] := 2;\par
+    Pego1.MultiAxesSubsets[1] := 2;\par
+\par
+    Pego1.MultiAxisStyle := gSeparateAxes;\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+    Pego1.WorkingAxis := 1;\par
+    Pego1.PlottingMethod := gPointsPlusLine;\par
+    Pego1.WorkingAxis := 0;\par
+\par
+    Pego1.ShowLegend := False;\par
+    Pego1.MarkDataPoints := True;\par
+    Pego1.AllowZooming := gHorzZooming;\par
+    Pego1.MultiAxesSizing := True;\par
+\par
+    // Make the line types bold //\par
+    Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[2] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[3] := PELT_MEDIUMSOLID;\par
+\par
+    Pego1.SubsetPointTypes[0] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[1] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[2] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[3] := PEPT_SQUARESOLID;\par
+\par
+    Pego1.CursorMode := gFloatingXY;\par
+    Pego1.MouseCursorControl := True;\par
+\par
+\{\par
+    /////////////////////////////////////////////////////\par
+    // From the MOUSEMOVE ///////////////////////////////\par
+    /////////////////////////////////////////////////////\par
+\par
+    // get last mouse location within control //\par
+    PEvget(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    nA := 0;      // Initialize axis, non-zero only if using MultiAxesSubsets //\par
+    nX := pt.x;   // Initialize nX and nY with mouse location //\par
+    nY := pt.y;\par
+    PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+\par
+    // We now know data coordinates for mouse location //\par
+\par
+    // Use fX to interpolate each subset to find approximate Y value //\par
+    nX := floor(fX) - 1;  // nX is floor of fX\par
+    x2 := nX + 1;    // x2 is right most point index\par
+    x1 := nX;        // x1 is left most point index or nX\par
+\par
+   if (fX < 1) or (fX > 12) Then\par
+   begin\par
+        Pego1.WorkingTable := 0;\par
+        Pego1.TAText[0,2] := '        ';\par
+        Pego1.TAText[0,5] := '        ';\par
+        Pego1.WorkingTable := 1;\par
+        Pego1.TAText[0,2] := '        ';\par
+        Pego1.TAText[0,2] := '        ';\par
+        PEdrawtable(Pego1.hObject , 0, 0);\par
+        PEdrawtable(Pego1.hObject , 1, 0);\par
+        exit;\par
+   end;\par
+\par
+   fX := fX - 1.0;\par
+\par
+   // 1st subset //\par
+   y2 := Pego1.YData[0, nX+1];\par
+   y1 := Pego1.YData[0, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset1Y := (slope * fX) + y0;\par
+\par
+   // 2nd subset //\par
+   y2 := Pego1.YData[1, nX+1];\par
+   y1 := Pego1.YData[1, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset2Y := (slope * fX) + y0;\par
+\par
+   // 3rd subset //\par
+   y2 := Pego1.YData[2, nX+1];\par
+   y1 := Pego1.YData[2, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset3Y := (slope * fX) + y0;\par
+\par
+   // 4th subset //\par
+   y2 := Pego1.YData[3, nX+1];\par
+   y1 := Pego1.YData[3, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset4Y := (slope * fX) + y0;\par
+\par
+   // Place text in table annotation //\par
+   Pego1.WorkingTable := 0;\par
+   PEgo1.TAText[0,2] := Format('%.2f', [Subset1Y]);\par
+   PEgo1.TAText[0,5] := Format('%.2f', [Subset2Y]);\par
+\par
+   Pego1.WorkingTable := 1;\par
+   PEgo1.TAText[0,2] := Format('%.2f', [Subset3Y]);\par
+   PEgo1.TAText[0,5] := Format('%.2f', [Subset4Y]);\par
+\par
+   PEdrawtable(Pego1.hObject, 0, 0);\par
+   PEdrawtable(Pego1.hObject, 1, 0);\par
+\}\par
+\par
+End\par
+Else If nChart = 29 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{029  Graph showing Table Annotation spaced\}\par
+\par
+     //! This shows how to place extra text inside table and within an axis. //\par
+     //! Maximize to allow room for textual data which is drawn as fixed font size. //\par
+\par
+     // This example builds upon the basic CreateSimpleGraph '000' example chart //\par
+     CreateSimpleGraph;\par
+\par
+     // Create two y axes //\par
+     Pego1.MultiAxesSubsets[0] := 2;\par
+     Pego1.MultiAxesSubsets[1] := 2;\par
+\par
+     // Construct a simple table annotation //\par
+     Pego1.WorkingTable := 0;\par
+     Pego1.TARows := 6;\par
+     Pego1.TAColumns := 12; // 12 is same number as PEP_nPOINTS\par
+\par
+     // Pass the table text //\par
+     b := True;\par
+\par
+     For r := 0 to 5 do\par
+     Begin\par
+         if (b) Then\par
+             dwColor := Pego1.PEargb(255,175,175,175)\par
+         else\par
+             dwColor := Pego1.PEargb(255,255,255,255);\par
+         b := Not b;\par
+         For c := 0 to 11 do\par
+         Begin\par
+             fp := (sin(0.03 * c + 1.0 + r) * 500.0) + (Random * 50);\par
+             Pego1.TAText[r,c] := Format('%.3f', [fp]);\par
+             Pego1.TAColor[r,c] := dwColor;\par
+         end;\par
+     end;\par
+\par
+    // Set Table Location //\par
+    Pego1.TALocation := gInsideAxis1;\par
+    Pego1.TAAxisLocation := gBottomTableSpaced;\par
+\par
+    // Other Table Related Properties //\par
+    Pego1.ShowTableAnnotation := True;\par
+    Pego1.TABorders := gNoBorder;\par
+    Pego1.TABackColor := 1;\par
+    Pego1.TAForeColor := 1;\par
+\par
+    // Construct a second simple table annotation //\par
+    Pego1.WorkingTable := 1;   // Note WorkingTable goes to 1\par
+    Pego1.TARows := 6;\par
+    Pego1.TAColumns := 12;\par
+\par
+    // Pass the table text //\par
+    b := True;\par
+    For r := 0 to 5 do\par
+    Begin\par
+        if (b) Then\par
+            dwColor := Pego1.PEargb(255,175,175,175)\par
+        else\par
+            dwColor := Pego1.PEargb(255,255,255,255);\par
+        b := Not b;\par
+        For c := 0 to 11 do\par
+        Begin\par
+            fp := (sin(0.03 *  c + 1.0 + (2 * r)) * 500.0) + (Random * 50);\par
+            Pego1.TAText[r,c] := Format('%.3f', [fp]);\par
+            Pego1.TAColor[r,c] := dwColor;\par
+        end;\par
+    end;\par
+\par
+    // Set Table Location //\par
+    Pego1.TALocation := gInsideAxis0;\par
+    Pego1.TAAxisLocation := gBottomTableSpaced;\par
+\par
+   // Other Table Related Properties //\par
+   Pego1.ShowTableAnnotation := True;\par
+   Pego1.TABorders := gNoBorder;\par
+   Pego1.TABackColor := 1;\par
+   PEgo1.TAForeColor := 1;\par
+\par
+   // Construct a third simple table annotation //\par
+   Pego1.WorkingTable := 2;  // Note WorkingTable goes to 2\par
+   Pego1.TARows := 2;\par
+   Pego1.TAColumns := 13;\par
+\par
+   // Pass the table text //\par
+    For r := 0 to 1 do\par
+    Begin\par
+        For c := 0 to 12 do\par
+        Begin\par
+            fp := (sin(0.03 * c + 1.0) * 500.0) + (Random * 50);\par
+            Pego1.TAText[r,c] := Format('%.3f', [fp]);\par
+        end;\par
+    end;\par
+\par
+   // Set Table Location //\par
+   Pego1.TALocation := gInsideTable;\par
+   Pego1.TAAxisLocation :=  gTopTableSpaced;\par
+\par
+   // Other Table Related Properties //\par
+   Pego1.ShowTableAnnotation := True;\par
+   Pego1.TABackColor := Pego1.PEargb(255,0,198,198);\par
+   Pego1.TAHeaderColumn := True;\par
+\par
+   // Set Text for Header Column //\par
+   Pego1.TAText[0,0] := 'Table Annotation Line 1';\par
+   Pego1.TAText[1,0] := 'Table Annotation Line 2';\par
+\par
+   // Done setting Table Annotations //\par
+\par
+   // Set Various Other Properties //\par
+   Pego1.BitmapGradientMode := True;\par
+   Pego1.QuickStyle := gDarkInset;\par
+\par
+   Pego1.DataPrecision := gNoDecimals;\par
+   Pego1.GraphPlusTable := gGraphPlusTable;\par
+   Pego1.LegendStyle := gInsideAxis;\par
+   Pego1.GridLineControl := gYAxis;\par
+   Pego1.MarkDataPoints := False;\par
+   Pego1.FontSize := gSmall;\par
+   Pego1.DataShadows := gWithShadows;\par
+   Pego1.ShowLegend := True;\par
+\par
+   Pego1.WorkingAxis := 0;\par
+   Pego1.PlottingMethod := gBar;\par
+   Pego1.PlottingMethodII := gPointsPlusLine2;\par
+   PEgo1.RYAxisComparisonSubsets := 1;\par
+   Pego1.RYAxisColor := Pego1.PEargb(255,0,198,198);\par
+   Pego1.YAxisLabel := '';\par
+   Pego1.RYAxisLabel := '';\par
+\par
+   Pego1.WorkingAxis := 1;\par
+   Pego1.PlottingMethod := gBar;\par
+   Pego1.RYAxisComparisonSubsets := 1;\par
+   Pego1.PlottingMethodII := gPointsPlusLine2;\par
+   Pego1.RYAxisColor := Pego1.PEargb(255,0,198,0);\par
+   Pego1.YAxisLabel := '';\par
+   Pego1.RYAxisLabel := '';\par
+\par
+   Pego1.SubsetColors[0] := Pego1.PEargb(128,138,0,0);\par
+   Pego1.SubsetColors[1] := Pego1.PEargb(128,0,198,198);\par
+   Pego1.SubsetColors[2] := Pego1.PEargb(128,138,138,0);\par
+   Pego1.SubsetColors[3] := Pego1.PEargb(128,0,198,0);\par
+\par
+   Pego1.ShowAnnotationsMenu := gShowMenu;\par
+   Pego1.DataPrecisionMenu := gHideMenu;\par
+\par
+End\par
+Else If nChart = 30 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{030  Graph showing Table Annotation Hot Spots\}\par
+\par
+    //! Please read the RED text within this code window and others.\par
+    //! You will find important information that improves your experience with the demo.\par
+    //!\par
+    //! Some things to try...\par
+    //! 1) Right click the chart and use the popup menu to adjust viewing style and other items.\par
+    //! 2) Left click and drag to zoom, use popup menu to undo zoom. Note how time scale changes.\par
+    //! 3) Left click the Portfolio table to select different stocks.\par
+    //! 4) Change Point Label Orientation via the popup menu and note how x axis scale changes.\par
+    //! 5) The Data Cursor can be moved with arrow keys.  Click a data point and then use arrow keys.\par
+    //! 6) Zoom chart and watch the Volume bar plotting method structure for different time ranges.\par
+    //!    There's new drawing logic that first recongnizes all bars are connected, then as range is shrunk,\par
+    //!    bar's get drawn 1 pixel apart, and finally after zooming more, bars are spaced.\par
+\par
+    // Note, the entire code to produce this example is shown below.\par
+    // The immediate secion controls chart construction, latter sections show.\par
+    // how to respond to mouse-move and table annotation hot spot events.\par
+    // The final section shows how the data is loaded from a comma delimited.\par
+    // file and studies calculated.\par
+\par
+    // This example shows a collection of features.\par
+    // Table Annotation Hot Spots can turn table annotations into user interface objects.\par
+    // Also shown is real-time table annotation updating and date/time handling.\par
+\par
+    // v9 features\par
+    Pego1.CursorPromptTracking := true;\par
+    Pego1.CursorPromptLocation := eCursorPromptLocation.gTooltip;\par
+    Pego1.CursorPromptStyle := eCursorPromptStyle.gXandYValue;\par
+    Pego1.TrackingTooltipMaxWidth := 100;\par
+    Pego1.TrackingCustomDataText := true;\par
+    Pego1.MouseCursorControl := true;\par
+\par
+    // Enable Gestures //\par
+    Pego1.Touch.InteractiveGestures := [igZoom, igPan];\par
+    Pego1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable ZoomWindow //\par
+    Pego1.ZoomWindow := True;\par
+\par
+    // Enable MouseWheel Zooming\par
+    Pego1.MouseWheelFunction := gMouseWheelHorzZoom;\par
+    Pego1.MouseDraggingX := true;  // note that pan gestures require MouseDragging to be enabled\par
+\par
+    // Enable MouseWheel Zoom Smoothness\par
+    Pego1.MouseWheelZoomSmoothness := 4;\par
+    Pego1.PinchZoomSmoothness := 2;\par
+\par
+    // Enable Bar Glass Effect //\par
+    Pego1.BarGlassEffect := True;\par
+\par
+    // Enable Plotting style gradient and bevel features //\par
+    Pego1.AreaGradientStyle := gRadialBottomRightPG;\par
+    Pego1.AreaBevelStyle := gMediumSmooth;\par
+    Pego1.SplineGradientStyle := gRadialBottomRightPG;\par
+    Pego1.SplineBevelStyle := gMediumSplineBevel;\par
+\par
+   // This lets us add/remove points without mangling data //\par
+   Pego1.SubsetByPoint := False;\par
+\par
+   // No Flicker //\par
+   Pego1.PrepareImages := True;\par
+   Pego1.CacheBmp := True;\par
+\par
+   // Fixed Font Sizes //\par
+   Pego1.FixedFonts := True;\par
+\par
+   // YAxis Changes Range as you pan horizontally or zoom //\par
+   Pego1.ScrollingScaleControl := True;\par
+\par
+   // Construct a simple table annotation //\par
+   Pego1.WorkingTable := 0;\par
+   Pego1.TARows := 17;\par
+   Pego1.TAColumns := 1;\par
+\par
+   // Pass the table text //\par
+   Pego1.TAText[0,0] := ' MSFT';\par
+   Pego1.TAText[1,0] := ' SUNW';\par
+   Pego1.TAText[2,0] := ' ORCL';\par
+   Pego1.TAText[3,0] := ' IBM';\par
+   Pego1.TAText[4,0] := ' INTC';\par
+   Pego1.TAText[5,0] := ' NSM';\par
+   Pego1.TAText[6,0] := ' DELL';\par
+   Pego1.TAText[7,0] := ' WMT';\par
+   Pego1.TAText[8,0] := ' CVX';\par
+   Pego1.TAText[9,0] := ' PBG';\par
+   Pego1.TAText[10,0] := '-----------------';\par
+\par
+   Pego1.TAHotSpot[0,0] := True;\par
+   Pego1.TAHotSpot[1,0] := True;\par
+   Pego1.TAHotSpot[2,0] := True;\par
+   Pego1.TAHotSpot[3,0] := True;\par
+   Pego1.TAHotSpot[4,0] := True;\par
+   Pego1.TAHotSpot[5,0] := True;\par
+   Pego1.TAHotSpot[6,0] := True;\par
+   Pego1.TAHotSpot[7,0] := True;\par
+   Pego1.TAHotSpot[8,0] := True;\par
+   Pego1.TAHotSpot[9,0] := True;\par
+\par
+   Pego1.TAColor[0,0] := Pego1.PEargb(255, 198, 0, 0);\par
+   Pego1.TAColor[1,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[2,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[3,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[4,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[5,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[6,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[7,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[8,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[9,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[10,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[11,0] := Pego1.PEargb(255, 150, 150, 150);\par
+   Pego1.TAColor[12,0] := Pego1.PEargb(255, 150, 150, 150);\par
+   Pego1.TAColor[13,0] := Pego1.PEargb(255, 142, 142, 142);\par
+   Pego1.TAColor[14,0] := Pego1.PEargb(255, 0, 170, 0);\par
+   Pego1.TAColor[15,0] := Pego1.PEargb(255, 198, 0, 0);\par
+   Pego1.TAColor[16,0] := Pego1.PEargb(255, 160, 160, 160);\par
+\par
+   Pego1.TAColumnWidth[0] := 8;\par
+\par
+   // Set Table Location //\par
+   Pego1.TALocation := eTALocation.gLeftCenterDesk;\par
+\par
+   // Other Table Related Properties ///\par
+   Pego1.ShowTableAnnotation := True;\par
+   PEgo1.TABorders := eTABorders.gSingleLine;\par
+   Pego1.TABackColor := Pego1.PEargb(255,255,255,255);\par
+   Pego1.TAForeColor := Pego1.PEargb(255,190,190,190);\par
+   Pego1.TATextSize := 100;\par
+\par
+   // Done setting Table Annotations //\par
+\par
+   // Load Data and Add Studies, Total of 11 subsets when finished //\par
+   LoadData('MSFT');\par
+\par
+   //! Set properties related to date/time mode, these require extra attention to detail //\par
+   Pego1.DeltasPerDay := 1;  // 1 data point per day\par
+   Pego1.DeltaX := -1;       // -1 special code for daily data //\par
+   Pego1.DateTimeMode := gVBDateTime; // How to interpret serial dates //\par
+   Pego1.YearMonthDayPrompt := gInsideTopLabel;\par
+   Pego1.DayLabelType := g1CharDay;\par
+   Pego1.MonthLabelType := g3CharMonth;\par
+\par
+   // Split up subsets among different axes //\par
+   Pego1.MultiAxesSubsets[0] := 7;\par
+   Pego1.MultiAxesSubsets[1] := 1;\par
+   Pego1.MultiAxesSubsets[2] := 1;\par
+   Pego1.MultiAxesSubsets[3] := 2;\par
+\par
+   Pego1.MultiAxesProportions[0] := 0.55;\par
+   Pego1.MultiAxesProportions[1] := 0.15;\par
+   Pego1.MultiAxesProportions[2] := 0.15;\par
+   Pego1.MultiAxesProportions[3] := 0.15;\par
+\par
+   // Set Various Other Properties ///\par
+   Pego1.DataPrecision := gTwoDecimals;\par
+   Pego1.MultiAxisStyle := gSeparateAxes;\par
+   Pego1.MultiAxesSizing := True;\par
+   Pego1.YAxisOnRight := True;\par
+   Pego1.SpecificPlotModeColor := True;    // Enables mult-colored candle stick fills\par
+   Pego1.AllowZooming := gHorzPlusVertZooming;\par
+   Pego1.ZoomStyle := gRO2NOT;\par
+\par
+   PEgo1.AllowDataHotSpots := True;\par
+   Pego1.HotSpotSize := gLargeHotSpots;\par
+\par
+   pego1.ShowXAxis := gGridLabels;\par
+   Pego1.MainTitle := '';\par
+   Pego1.SubTitle := '';\par
+   Pego1.FontSize := gMedium;\par
+   Pego1.PointSize := gSmallPoints;\par
+   Pego1.AllowMaximization := False;\par
+   Pego1.GridLineControl := gYPlusXAxis;\par
+   Pego1.SimpleLineLegend := True;\par
+   Pego1.SimplePointLegend := True;\par
+   Pego1.LegendStyle := gTopOfAxis;\par
+   Pego1.AutoMinMaxPadding := 1;\par
+   Pego1.OHLCMinWidth := 12;  // Controls minium candle-stick width //\par
+   Pego1.GraphPlusTableMenu := gHideMenu;\par
+   Pego1.TableWhatMenu := gHideMenu;\par
+   Pego1.LegendLocationMenu := gShowMenu;\par
+   Pego1.MultiAxisStyleMenu := gShowMenu;\par
+   Pego1.ShowTableAnnotationsMenu := gShowMenu;\par
+   Pego1.AllowAnnotationControl := True;\par
+   Pego1.PrintStyleControl := gPrintDefaultMono;\par
+\par
+    // Enable middle mouse dragging //\par
+    Pego1.MouseDraggingX := True;\par
+\par
+   // Set up per axis properties //\par
+   Pego1.WorkingAxis := 0;\par
+   Pego1.PlottingMethod := gSpecificPlotMode;\par
+   Pego1.SpecificPlotMode := gBoxPlot;\par
+   Pego1.ComparisonSubsets := 3;\par
+   Pego1.ShowYAxis := gGridLabels;\par
+\par
+   Pego1.WorkingAxis := 1;\par
+   Pego1.PlottingMethod := gBar;\par
+   Pego1.ShowYAxis := gGridLabels;\par
+\par
+   Pego1.WorkingAxis := 2;\par
+   Pego1.PlottingMethod := gLine;\par
+   Pego1.ShowYAxis := gGridLabels;\par
+\par
+   Pego1.WorkingAxis := 3;\par
+   Pego1.PlottingMethod := gArea;\par
+   Pego1.ShowYAxis := gGridLabels;\par
+\par
+    // Set Subset Colors //\par
+   Pego1.SubsetColors[0] := Pego1.PEargb(255, 160, 160, 160);\par
+   Pego1.SubsetColors[1] := Pego1.PEargb(255, 160, 160, 160);\par
+   Pego1.SubsetColors[2] := Pego1.PEargb(255, 128, 0, 0);\par
+   Pego1.SubsetColors[3] := Pego1.PEargb(255, 0, 128, 0);\par
+   Pego1.SubsetColors[4] := Pego1.PEargb(80, 235, 0, 0);\par
+   Pego1.SubsetColors[5] := Pego1.PEargb(80, 235, 235, 0);\par
+   Pego1.SubsetColors[6] := Pego1.PEargb(80, 0, 235, 235);\par
+   Pego1.SubsetColors[7] := Pego1.PEargb(255, 170, 170, 170);\par
+   Pego1.SubsetColors[8] := Pego1.PEargb(255, 0, 140, 140);\par
+   Pego1.SubsetColors[9] := Pego1.PEargb(180, 0, 195, 0);\par
+   Pego1.SubsetColors[10] := Pego1.PEargb(120, 165, 165, 165);\par
+\par
+   nSLT := PELT_MEDIUMTHINSOLID;\par
+   Pego1.SubsetLineTypes[0] := PELT_THINSOLID;\par
+   Pego1.SubsetLineTypes[1] := PELT_THINSOLID;\par
+   Pego1.SubsetLineTypes[2] := nSLT;\par
+   Pego1.SubsetLineTypes[3] := nSLT;\par
+   Pego1.SubsetLineTypes[4] := nSLT;\par
+   Pego1.SubsetLineTypes[5] := nSLT;\par
+   Pego1.SubsetLineTypes[6] := nSLT;\par
+   Pego1.SubsetLineTypes[7] := nSLT;\par
+   Pego1.SubsetLineTypes[8] := nSLT;\par
+   Pego1.SubsetLineTypes[9] := nSLT;\par
+   Pego1.SubsetLineTypes[10] := nSLT;\par
+\par
+   // Set Subset Labels //\par
+   Pego1.SubsetLabels[0] := 'High';\par
+   Pego1.SubsetLabels[1] := 'Low';\par
+   Pego1.SubsetLabels[2] := 'Open';\par
+   Pego1.SubsetLabels[3] := 'Close';\par
+   Pego1.SubsetLabels[4] := 'Bollinger Upper';\par
+   Pego1.SubsetLabels[5] := 'SMA 20';\par
+   Pego1.SubsetLabels[6] := 'Bollinger Lower';\par
+   Pego1.SubsetLabels[7] := 'Volume';\par
+   Pego1.SubsetLabels[8] := 'Relative Strength Index - 10';\par
+   Pego1.SubsetLabels[9] := 'Fast %K';\par
+   Pego1.SubsetLabels[10] := 'Slow %D';\par
+\par
+   Pego1.GradientBars := 14;\par
+   Pego1.TextShadows := gShadowBoldText;\par
+   Pego1.MainTitleBold := True;\par
+   Pego1.SubTitleBold := True;\par
+   Pego1.LabelBold := True;\par
+   Pego1.LineShadows := True;\par
+   Pego1.FontSize := gMedium;\par
+   Pego1.DataShadows := gWithShadows;\par
+\par
+   Pego1.BitmapGradientMode := True;\par
+   Pego1.QuickStyle := eQuickStyle.gDarkNoBorder;\par
+\par
+    // v9.5\par
+    Pego1.AllowAnnotationControl := true;\par
+    Pego1.ShowAnnotationTextMenu := eMenuControl.gShowMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+\par
+    for annot := 0 to 14 do\par
+    begin\par
+        nRndRow := Random(4); // first 4 subsets\par
+        nRndCol := Random(Pego1.Points);\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[nRndRow, nRndCol];\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_SMALLDOWNTRIANGLESOLID;\par
+        Pego1.GraphAnnotationText[aCnt] := '';\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        Pego1.GraphAnnotationZoom[aCnt] := eAnnotationZoomWindow.gGraphAndZoomWindow;\par
+        aCnt := aCnt + 1;\par
+\par
+        Pego1.GraphAnnotationX[aCnt] := nRndCol + 1;\par
+        Pego1.GraphAnnotationY[aCnt] := Pego1.YData[nRndRow, nRndCol];\par
+        Pego1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pego1.GraphAnnotationText[aCnt] := 'Annotation ' + IntToStr(annot);\par
+        Pego1.GraphAnnotationColor[aCnt] := Pego1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+\par
+    end;\par
+\par
+   Pego1.ShowAnnotations := true;\par
+   Pego1.GraphAnnotationTextSize := 110;\par
+   Pego1.MaximumSymbolSize := eMinimumPointSize.gLargeMPS;\par
+   Pego1.MinimumPointSize := eMinimumPointSize.gLargeMPS;\par
+   PEnset(Pego1.hObject, PEP_nALLOWGRAPHANNOTHOTSPOTS,PEAHS_GRAPH_AND_ZOOMWINDOW);\par
+   Pego1.ZoomWindowShowAnnotations := true;\par
+   Pego1.ShowAnnotationText := true;\par
+\par
+   // v7.2 new features //\par
+   Pego1.PointGradientStyle := gVerticalAscentInversePG;\par
+   Pego1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+   Pego1.LineSymbolThickness := 3;\par
+   Pego1.AreaBorder := 1;\par
+   Pego1.SolidLineOverArea := 1;\par
+\par
+   Pego1.ImageAdjustTop := 75;\par
+   Pego1.ImageAdjustLeft := 75;\par
+   Pego1.ImageAdjustRight := 75;\par
+\par
+   // Sets various export defaults //\par
+   Pego1.DpiX := 600;\par
+   Pego1.DpiY := 600;\par
+\par
+   Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+   Pego1.ExportTypeDef := gExportPng;\par
+   Pego1.ExportDestDef := gExportToClipboard;\par
+   Pego1.ExportUnitXDef := '1280';\par
+   Pego1.ExportUnitYDef := '768';\par
+   Pego1.ExportImageDpi := 300;\par
+   Pego1.AllowSvgExport := True;\par
+\par
+   Pego1.RenderEngine := gDirect2D;\par
+   Pego1.AntiAliasText := True;\par
+   Pego1.AntiAliasGraphics := True;\par
+\par
+\par
+\{\par
+   ////////////////////////////////////////////////////////\par
+   // DataHotSpot Handler /////////////////////////////////\par
+   ////////////////////////////////////////////////////////\par
+\par
+   Pego1.CursorMode := gVertLine;   // Enable Vertical Cursor Mode.\par
+   Pego1.CursorPoint := PointIndex;  // Set Cursor's focus selected point.\par
+\par
+   ////////////////////////////////////////////////////////\par
+   // Mouse Move Handler //////////////////////////////////\par
+   ////////////////////////////////////////////////////////\par
+\par
+   // get last mouse location within control //\par
+   PEvget(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+   nA := 0;      //Initialize axis, non-zero only if using MultiAxesSubsets\par
+   nX := pt.x;   //Initialize nX and nY with mouse location\par
+   nY := pt.y;\par
+   PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+\par
+   // We now know data coordinates for mouse location //\par
+\par
+   // Code to pick closest point index //\par
+   fY := fX - Floor(fX);\par
+   if (fY > 0.5) Then\par
+       nX := Floor(fX)\par
+   else\par
+       nX := Floor(fX) - 1;\par
+\par
+   if (fX < 1) or (fX > 731) Then  // 731 points per subset in data file\par
+   begin\par
+        Pego1.TAText[11, 0] := '        ';\par
+        Pego1.TAText[12, 0] := '        ';\par
+        Pego1.TAText[13, 0] := '        ';\par
+        Pego1.TAText[14, 0] := '        ';\par
+        Pego1.TAText[15, 0] := '        ';\par
+        Pego1.TAText[16, 0] := '        ';\par
+        PEdrawtable(Pego1.hObject, 0, 0);\par
+        Exit;\par
+   end;\par
+\par
+   fX := fX - 1.0;\par
+\par
+   // Get Data at closest point //\par
+\par
+   fHigh := Pego1.YData[0, nX];\par
+   fLow := Pego1.YData[1, nX];\par
+   fOpen := Pego1.YData[2, nX];\par
+   fClose := Pego1.YData[3, nX];\par
+   fVolume := Pego1.YData[7, nX];\par
+   szDate := Pego1.PointLabels[nX];\par
+\par
+   // Place text in table annotation //\par
+   // Get numeric precision //\par
+   szPrecision := IntToStr(Integer(Pego1.DataPrecision));\par
+\par
+   // Place text in table annotation //\par
+   Pego1.WorkingTable := 0;\par
+   Pego1.TAText[12,0] := szDate;\par
+\par
+   szF := 'H:%.' + szPrecision + 'f';\par
+   Pego1.TAText[12, 0] := Format(szF, [fHigh]);\par
+   szF := 'L:%.' + szPrecision + 'f';\par
+   Pego1.TAText[13, 0] := Format(szF, [fLow]);\par
+   szF := 'O:%.' + szPrecision + 'f';\par
+   Pego1.TAText[14, 0] := Format(szF, [fOpen]);\par
+   szF := 'C:%.' + szPrecision + 'f';\par
+   Pego1.TAText[15, 0] := Format(szF, [fClose]);\par
+   Pego1.TAText[16, 0] := Format('V:%.0f', [fVolume]);\par
+   PEdrawtable(Pego1.hObject, 0, 0);\par
+\par
+   /////////////////////////////////////////////////\par
+   // Table Hot Spot Handler ///////////////////////\par
+   /////////////////////////////////////////////////\par
+\par
+    If (nIndex = 0) Then  // zero represents first table annotation\par
+    begin\par
+        Pego1.ZoomMode := False;\par
+        Pego1.PointsToGraph := 0;  // plot all points\par
+\par
+        // Change color of selected table item //\par
+        For i := 0 To 9 Do\par
+            Pego1.TAColor[i, 0] := Pego1.PEargb(255, 142, 142, 142);\par
+        Pego1.TAColor[nRow, nColumn] := Pego1.PEargb(128, 198, 0, 0);\par
+\par
+        szSym := TrimLeft(Pego1.TAText[nRow, nColumn]);\par
+\par
+        // OK, Change Data //\par
+        LoadData(szSym);\par
+\par
+        PEreinitialize(Pego1.hObject);\par
+        PEresetimage(Pego1.hObject, 0, 0);\par
+        InvalidateRect(Pego1.HANDLE, 0, False);\par
+    end;\par
+\par
+   /////////////////////////////////////////////////\par
+   // Cursor Move Handler  /////////////////////////\par
+   /////////////////////////////////////////////////\par
+\par
+   nX := Pego1.CursorPoint;\par
+\par
+   // Get Data at closest point //\par
+   fHigh := Pego1.YData[0, nX];\par
+   fLow := Pego1.YData[1, nX];\par
+   fOpen := Pego1.YData[2, nX];\par
+   fClose := Pego1.YData[3, nX];\par
+   fVolume := Pego1.YData[7, nX];\par
+   szDate := Pego1.PointLabels[nX];\par
+\par
+   // Place text in table annotation //\par
+   // Get numeric precision //\par
+   szPrecision := IntToStr(Integer(Pego1.DataPrecision));\par
+\par
+   // Place text in table annotation //\par
+   Pego1.WorkingTable := 0;\par
+   Pego1.TAText[12,0] := szDate;\par
+\par
+   szF := 'H:%.' + szPrecision + 'f';\par
+   Pego1.TAText[13, 0] := Format(szF, [fHigh]);\par
+   szF := 'L:%.' + szPrecision + 'f';\par
+   Pego1.TAText[14, 0] := Format(szF, [fLow]);\par
+   szF := 'O:%.' + szPrecision + 'f';\par
+   Pego1.TAText[15, 0] := Format(szF, [fOpen]);\par
+   szF := 'C:%.' + szPrecision + 'f';\par
+   Pego1.TAText[16, 0] := Format(szF, [fClose]);\par
+   Pego1.TAText[17, 0] := Format('V:%.0f', [fVolume]);\par
+   PEdrawtable(Pego1.hObject, 0, 0);\par
+\par
+   //////////////////////////////////////////////////////\par
+   // LoadData Function /////////////////////////////////\par
+   //////////////////////////////////////////////////////\par
+\{\par
+Procedure TForm2.LoadData(sName: string);\par
+var\par
+    d : double;\par
+    p : Integer;\par
+    szFile : string;\par
+    szLabel: WideString;\par
+    szLine: WideString;\par
+    f1 : single;\par
+    f2 : single;\par
+    f3 : single;\par
+    f4 : single;\par
+    f5 : single;\par
+    pfile : textfile;\par
+    n1 : string;\par
+    n2 : string;\par
+    n3 : string;\par
+    n4 : string;\par
+    n5 : string;\par
+    szYear: string;\par
+    szMonth: string;\par
+    szDay: string;\par
+    szDate: string;\par
+    nCnt: Integer;\par
+    nPos1: Integer;\par
+    nCnt2: Integer;\par
+    szParsedStrings: array[0 .. 8] of string;\par
+\par
+    ID : Integer;\par
+    f : single;\par
+    Days : LongInt;\par
+    pnt : Integer;\par
+    i : Integer;\par
+    Total : double;\par
+    Total2 : double;\par
+    X : Integer;\par
+    SMAfBB : double;\par
+    BBNum : double;\par
+    pYD3 : ^YD3;\par
+\par
+    RS : Single;\par
+    RSI : Single;\par
+    LowerCount : Integer;\par
+    UpperCount : Integer;\par
+    pUpperArray : ^UpperArray;\par
+    pLowerArray : ^LowerArray;\par
+\par
+    SwFac : Integer;\par
+    Dperiod : Integer;\par
+    q : Integer;\par
+    LowMin : Single;\par
+    HighMax : Single;\par
+    SlowK : Single;\par
+    Dfactor : Single;\par
+    PercentD : Single;\par
+    pSlowOC : ^SlowOC;\par
+    pKperiod : ^Kperiod;\par
+    pHigh : ^HighA;\par
+    pLow : ^LowA;\par
+\par
+begin\par
+    // Function to load financial data from a comma delimited file //\par
+\par
+    Pego1.Subsets := 11;\par
+    Pego1.Points := 1000; // setting to a large value, later we will reduce //\par
+\par
+    Pego1.UsingXDataII := True;\par
+\par
+    szFile := sName + '.txt';\par
+\par
+    // Open Data File //\par
+    nCnt := 0;\par
+    assignfile(pfile, szFile);\par
+    reset(pfile);\par
+\par
+    While Eof(pfile) <> true do\par
+    Begin\par
+        // Parse out different fields //\par
+        readln(pfile, szLine);\par
+\par
+        // Parse out fields within line //\par
+\par
+        nCnt2 := 0;\par
+        nPos1 := Pos(',', szLine);\par
+\par
+        while nPos1 <> 0 do\par
+        begin\par
+             szParsedStrings[nCnt2] := LeftStr(szLine, nPos1 - 1);\par
+             szLine := RightStr(szLine, Length(szLine) - nPos1);\par
+             nPos1 := Pos(',', szLine);\par
+             nCnt2 := nCnt2 + 1;\par
+        end;\par
+\par
+        szParsedStrings[nCnt2] := szLine;\par
+\par
+        szDate := szParsedStrings[0];\par
+        n1 := szParsedStrings[1];\par
+        n2 := szParsedStrings[2];\par
+        n3 := szParsedStrings[3];\par
+        n4 := szParsedStrings[4];\par
+        n5 := szParsedStrings[5];\par
+        szYear := Copy(szDate, 1, 2);\par
+        szMonth := Copy(szDate, 3, 2);\par
+        szDay := Copy(szDate, 5, 2);\par
+        f1 := StrToFloat(n1);\par
+        f2 := StrToFloat(n2);\par
+        f3 := StrToFloat(n3);\par
+        f4 := StrToFloat(n4);\par
+        f5 := StrToFloat(n5);\par
+\par
+        szLabel := szMonth + '/' + szDay + '/' + szYear;\par
+        d := StrToDate(szLabel) + 0.5;\par
+        Pego1.XDataII[0, nCnt] := d;\par
+\par
+        // Pass OHLC Volume Data //\par
+        Pego1.YData[0, nCnt] := f2;\par
+        Pego1.YData[1, nCnt] := f3;\par
+        Pego1.YData[2, nCnt] := f1;\par
+        Pego1.YData[3, nCnt] := f4;\par
+        Pego1.YData[7, nCnt] := f5;\par
+\par
+        // Set PointLabel data, string representation of date //\par
+        Pego1.PointLabels[nCnt] := szLabel;\par
+\par
+        // Store first date as StartTime property.  Critical!\par
+        if (nCnt = 0) then\par
+            Pego1.StartTime := d;\par
+\par
+        nCnt := nCnt + 1;\par
+    end;\par
+\par
+    // We now have data, let's make some studies //\par
+\par
+    ////////////////////////////////////////////////////////////////////\par
+    // Bollinger Bands //\par
+    /////////////////////\par
+\par
+    GetMem(pYD3, SizeOf(Single) * nCnt);\par
+\par
+    ID := 0;\par
+    Total := 0;\par
+    Total2 := 0;\par
+    X := 1;\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+        pYD3[pnt] := Pego1.YData[3, pnt];\par
+\par
+    // Middle Band = SMA\par
+    Days := 20;\par
+    For pnt := 0 To (nCnt-Days-1) do\par
+    begin\par
+        Total := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            Total := Total + pYD3[i];\par
+        f := Total / Days;\par
+        Pego1.YData[5, pnt + Days - 1] := f;\par
+    end;\par
+\par
+    // Upper Band = Middle Band + [Standard Deviation * Square Root\{[Sum for x Days((Closing Price - Middle Band)^2)]/Days]\par
+    For pnt :=0 To (nCnt-Days-1) do\par
+    begin\par
+        Total := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            Total := Total + pYD3[i];\par
+        SMAfBB := Total / Days;\par
+        // Find sum of Closing Price minus SMA over days and square\par
+        BBNum := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            BBNum := ((pYD3[i] - SMAfBB) * (pYD3[i] - SMAfBB)) + BBNum;\par
+        f:= SMAfBB + 2.0 * Sqrt(BBNum / Days);\par
+        Pego1.YData[4, pnt+Days-1] := f;  // upper\par
+    end;\par
+\par
+    // Lower Band = Middle Band - [Standard Deviation * Square Root\{[Sum for x Days((Closing Price - Middle Band)^2)]/Days]\par
+    For pnt := 0 To (nCnt-Days-1) do\par
+    begin\par
+        Total := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            Total := Total + pYD3[i];\par
+        SMAfBB := Total / Days;\par
+        // Find sum of Closing Price minus SMA over days and square\par
+        BBNum := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            BBNum := ((pYD3[i] - SMAfBB) * (pYD3[i] - SMAfBB)) + BBNum;\par
+        f := SMAfBB - 2.0 * Sqrt(BBNum / Days);\par
+        Pego1.YData[6, pnt+Days-1] := f;  // lower\par
+    end;\par
+\par
+    ////////////////////////////////////////////////////////////////////////////////////\par
+    // Relative Strength Index //\par
+    /////////////////////////////\par
+\par
+    Total := 0;\par
+    Total2 := 0;\par
+    X := 1;\par
+    RS := 0;\par
+    RSI := 0;\par
+    LowerCount := 0;\par
+    UpperCount := 0;\par
+\par
+    // How many days do you want to check\par
+    Days := 10;\par
+\par
+    GetMem(pUpperArray, SizeOf(Single) * nCnt);\par
+    GetMem(pLowerArray, SizeOf(Single) * nCnt);\par
+\par
+    For i :=1 To Days do\par
+    begin\par
+        if ((pYD3[i] - pYD3[i - 1]) < 0) Then\par
+        begin\par
+            pLowerArray[LowerCount] := (pYD3[i] - pYD3[i - 1]);\par
+            LowerCount := LowerCount + 1;\par
+        end\par
+        else\par
+        begin\par
+            pUpperArray[UpperCount] := (pYD3[i] - pYD3[i - 1]);\par
+            UpperCount := UpperCount + 1;\par
+        end;\par
+    end;\par
+\par
+    // Total the amounts over the period\par
+    Total := 0;\par
+    For i := 0 To LowerCount-1 do\par
+        Total := pLowerArray[i] + Total;\par
+\par
+    Total2 := 0;\par
+    For i := 0 To UpperCount-1 do\par
+        Total2 := pUpperArray[i] + Total2;\par
+\par
+    // Divide up by down\par
+    RS := (Total2 / Days) / (Abs(Total) / Days);\par
+\par
+    // Use the RSI formula\par
+    RSI := 100.0 - (100.0 / (1.0 + RS));\par
+    Pego1.YData[8, Days-1] := RSI;\par
+\par
+    For i := Days To nCnt-1 do\par
+    begin\par
+        if (pYD3[i] <> 0) and (pYD3[i - 1] <> 0) Then\par
+        begin\par
+            Total := Total * (Days - 1);\par
+            Total2 := Total2 * (Days - 1);\par
+\par
+            if ((pYD3[i] - pYD3[i - 1]) < 0) Then\par
+                Total := (pYD3[i] - pYD3[i - 1]) + Total\par
+            else\par
+                Total2 := (pYD3[i] - pYD3[i - 1]) + Total2;\par
+\par
+            Total := Total / Days;\par
+            Total2 := Total2 / Days;\par
+\par
+            RS := (Total2) / (Abs(Total));\par
+            RSI := 100.0 - (100.0 / (1.0 + RS));\par
+            Pego1.YData[8, Days-1+i] := RSI;\par
+        end;\par
+    end;\par
+\par
+    // Add a mid axis line annotation\par
+    Pego1.HorzLineAnnotation[0] := 50.0;\par
+    Pego1.HorzLineAnnotationAxis[0] := 2;\par
+    Pego1.HorzLineAnnotationType[0] := PELT_MEDIUMTHINSOLID;\par
+    Pego1.HorzLineAnnotationColor[0] := Pego1.PEargb(128, 198, 0, 0);\par
+    Pego1.ShowAnnotations := True;\par
+\par
+    // Set the working axis extents\par
+    Pego1.WorkingAxis := 2;\par
+    Pego1.ManualScaleControlY := gManualMinandMax;\par
+    Pego1.ManualMinY := 0;\par
+    Pego1.ManualMaxY := 100;\par
+\par
+    /////////////////////////////////////////////////////////////////////\par
+    // Stochastic Oscillator //\par
+    ///////////////////////////\par
+    LowMin := 9999.9;\par
+    HighMax := 0.0;\par
+\par
+    GetMem(pSlowOC, SizeOf(Single) * nCnt);\par
+    GetMem(pKperiod, SizeOf(Single) * nCnt);\par
+    GetMem(pHigh, SizeOf(Single) * nCnt);\par
+    GetMem(pLow, SizeOf(Single) * nCnt);\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+    begin\par
+        pHigh[pnt] := Pego1.YData[0, pnt];\par
+        pLow[pnt] := Pego1.YData[1, pnt];\par
+    end;\par
+\par
+    // How many days do you want to check\par
+    Days := 30;\par
+    SwFac := 1;\par
+    Dperiod := 15;\par
+\par
+    For pnt := 0 To (nCnt-Days-1) do\par
+    begin\par
+        For i := pnt To Days+pnt-1 do\par
+            if (pHigh[i] <> 0) Then\par
+                if (pHigh[i] > HighMax) Then\par
+                    HighMax := pHigh[i];\par
+\par
+        For i := pnt To Days+pnt-1 do\par
+            if (pLow[i] <> 0) Then\par
+                if (pLow[i] < LowMin) Then\par
+                    LowMin := pLow[i];\par
+\par
+        if (pYD3[Days - 1 + pnt] <> 0) Then\par
+            pKperiod[pnt] := ((pYD3[Days - 1 + pnt] - LowMin) / (HighMax - LowMin)) * 100.0;\par
+\par
+        LowMin := 9999.9;\par
+        HighMax := 0.0;\par
+    end;\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+    begin\par
+        SlowK := 0;\par
+        For q := pnt To SwFac+pnt-1 do\par
+            SlowK := pKperiod[q] + SlowK;\par
+\par
+        pSlowOC[pnt] := SlowK / SwFac;\par
+        Pego1.YData[9, Days + pnt + SwFac] := pSlowOC[pnt];\par
+    end;\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+    begin\par
+        PercentD := 0;\par
+        For q := pnt To Dperiod+pnt-1 do\par
+            PercentD := pSlowOC[q] + PercentD;\par
+        Dfactor := PercentD / Dperiod;\par
+        Pego1.YData[10, Days + pnt + Dperiod] := Dfactor;\par
+    end;\par
+\par
+    // Set the working axis extents\par
+    Pego1.WorkingAxis := 3;\par
+    Pego1.ManualScaleControlY := gManualMinandMax;\par
+    Pego1.ManualMinY := 0;\par
+    Pego1.ManualMaxY := 100;\par
+\par
+    FreeMem(pYD3, SizeOf(Single) * nCnt);\par
+    FreeMem(pUpperArray, SizeOf(Single) * nCnt);\par
+    FreeMem(pLowerArray, SizeOf(Single) * nCnt);\par
+    FreeMem(pSlowOC, SizeOf(Single) * nCnt);\par
+    FreeMem(pKperiod, SizeOf(Single) * nCnt);\par
+    FreeMem(pHigh, SizeOf(Single) * nCnt);\par
+    FreeMem(pLow, SizeOf(Single) * nCnt);\par
+\par
+    Pego1.Points := nCnt;\par
+\par
+\} // End of LoadData function\par
+\par
+End\par
+Else If nChart = 31 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{031  Graph showing Subset Obstacles\}\par
+\par
+    //! Note how annotation text does not overlap lines in bottom axes.\par
+    //! Left click and drag to zoom chart.  Note how text locations change as you zoom.\par
+    //! Left click and drag annotation text to move annotation text.\par
+    //!\par
+    //! This example demonstrates new annotation text positioning logic which prevents all text\par
+    //! from overlapping.  It also shows how to 1) manually position text with an annotation,\par
+    //! 2) allow user to move annotation text, and 3) declare subsets as obstacles so annotation text\par
+    //! doesn't overlap subsets.  It also ahows how to change the default location where\par
+    //! annotation text is automatically positioned.\par
+\par
+    // Pass Data\par
+    Pego1.Subsets := 4;\par
+    Pego1.Points := 100;\par
+\par
+    szs[0] := 'High';\par
+    szs[1] := 'Medium High';\par
+    szs[2] := 'Medium';\par
+    szs[3] := 'Medium Low';\par
+    szs[4] := 'Low';\par
+\par
+    bAddAnnot := False;\par
+    nCount := 0;\par
+    For p := 0 To 99 do\par
+    begin\par
+        Pego1.YData[0, p] := 105 + (20 * Sin(0.1 * p)) + (5 * Random);\par
+        Pego1.YData[1, p] := 105 + (20 * Sin(0.1 * p)) + (5 * Random) + 30;\par
+        Pego1.YData[2, p] := 105 + (20 * Sin(0.4 * p)) + (5 * Random) + 30;\par
+        Pego1.YData[3, p] := 105 + (20 * Sin(0.1 * p)) + (5 * Random) + 20;\par
+\par
+        If (bAddAnnot) Then\par
+        begin\par
+            Pego1.GraphAnnotationX[nCount] := p + 1;\par
+            Pego1.GraphAnnotationY[nCount] := Pego1.YData[1, p];\par
+            Pego1.GraphAnnotationText[nCount] := szs[RandomRange(0,4)];\par
+            Pego1.GraphAnnotationType[nCount] := PEGAT_POINTER;\par
+            Pego1.GraphAnnotationAxis[nCount] := 1;\par
+            nCount := nCount + 1;\par
+        end;\par
+        bAddAnnot := Not bAddAnnot;\par
+    end;\par
+\par
+    // The following code manully places annotation text at separate coordinates than annotation. //\par
+    // GraphAnnotationText has |H special justifation code which signifies that coordinates follow. //\par
+    // Note that coordinates are split and terminated with pipe symbol. //\par
+    Pego1.GraphAnnotationX[nCount] := 20;\par
+    Pego1.GraphAnnotationY[nCount] := 90;\par
+    Pego1.GraphAnnotationText[nCount] := '|H33.0|120.0|Moveable';\par
+    Pego1.GraphAnnotationType[nCount] := PEGAT_POINTER;\par
+\par
+    // Set Plotting Methods per Subset //\par
+    Pego1.PlottingMethods[0] := PEGPM_BAR;\par
+    Pego1.PlottingMethods[1] := PEGPM_LINE;\par
+    Pego1.PlottingMethods[2] := PEGPM_POINTSPLUSBFCGRAPHED;\par
+    Pego1.PlottingMethods[3] := PEGPM_STEP;\par
+    Pego1.BestFitDegree := gDegree4;\par
+\par
+    // Designate 2nd, 3rd, and 4th subset as obstacles //\par
+    Pego1.SubsetObstacles[0] := False;\par
+    Pego1.SubsetObstacles[1] := True;\par
+    Pego1.SubsetObstacles[2] := True;\par
+    Pego1.SubsetObstacles[3] := True;\par
+\par
+    // This code replaces the first default text location attempted for automatic text placement //\par
+    // Setting to 270 causes text to be centered above annotation location if no obstacle is found //\par
+    Pego1.GraphAnnotTextLocation[0] := 270;\par
+\par
+    // Show annotations and allow graph hot spots and moveable annotation text //\par
+    Pego1.ShowAnnotations := True;\par
+    Pego1.AllowGraphAnnotHotSpots := True;\par
+    Pego1.GraphAnnotMoveable := gPointerMoveable;\par
+\par
+    // Split up subsets among different axes //\par
+    Pego1.MultiAxesSubsets[0] := 1;\par
+    Pego1.MultiAxesSubsets[1] := 3;\par
+    Pego1.MultiAxesProportions[0] := 0.3;\par
+    Pego1.MultiAxesProportions[1] := 0.7;\par
+\par
+    Pego1.MainTitle := 'Drag a string';\par
+    Pego1.SubTitle := '';\par
+    Pego1.FocalRect := False;\par
+    Pego1.GridLineControl := gNoGrid;\par
+    Pego1.AllowZooming := gHorzZooming;\par
+    Pego1.ZoomStyle := gRO2NOT;\par
+\par
+    // Subset labels //\par
+    Pego1.SubsetLabels[0] := 'Texas';\par
+    Pego1.SubsetLabels[1] := 'Florida';\par
+    Pego1.SubsetLabels[2] := 'Washington';\par
+    Pego1.SubsetLabels[3] := 'California';\par
+\par
+    // Subset colors //\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(255, 192, 192, 198);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(255, 0, 198, 198);\par
+    Pego1.SubsetColors[2] := Pego1.PEargb(255, 198, 198, 0);\par
+    Pego1.SubsetColors[3] := Pego1.PEargb(255, 0, 198, 0);\par
+\par
+    // Subset line types //\par
+    Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[2] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[3] := PELT_MEDIUMSOLID;\par
+\par
+    // Various other features //\par
+    Pego1.FixedFonts := True;\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightLine;\par
+\par
+    Pego1.SimplePointLegend := True;\par
+    Pego1.SimpleLineLegend := True;\par
+    Pego1.LegendStyle := gOneLine;\par
+\par
+    Pego1.GraphAnnotationTextSize := 85;\par
+    Pego1.AllowAnnotationControl := True;\par
+    Pego1.MarkDataPoints := True;\par
+    Pego1.MultiAxisStyle := gSeparateAxes;\par
+    Pego1.MultiAxisStyleMenu := gShowMenu;\par
+    Pego1.LegendLocationMenu := gShowMenu;\par
+    Pego1.AllowStep := True;\par
+    Pego1.DataShadows := gWithShadows;\par
+\par
+    Pego1.GradientBars := 8;\par
+    Pego1.TextShadows := gShadowBoldText;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.SubTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.LineShadows := True;\par
+    Pego1.FontSize := gMedium;\par
+    Pego1.PointsToGraph := 50;\par
+\par
+    // v7.2 new features //\par
+    Pego1.PointGradientStyle := gRadialTopLeftPG;\par
+    Pego1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+    Pego1.LineSymbolThickness := 3;\par
+    Pego1.AreaBorder := 1;\par
+\par
+    // Sets various export defaults //\par
+    Pego1.DpiX := 600;\par
+    Pego1.DpiY := 600;\par
+\par
+    Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+    Pego1.ExportTypeDef := gExportPng;\par
+    Pego1.ExportDestDef := gExportToClipboard;\par
+    Pego1.ExportUnitXDef := '1280';\par
+    Pego1.ExportUnitYDef := '768';\par
+    Pego1.ExportImageDpi := 300;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasText := True;\par
+    Pego1.AntiAliasGraphics := True;\par
+\par
+  End\par
+Else If nChart = 32 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{032  Graph showing 16 axes\}\par
+\par
+    //! Version 6 adds support for up to 16 left and 16 right y axes.\par
+    //! Also added is AxisBackColor, AxisForeColor, and AxisBorderType.\par
+    //! Select Graph menu from within the View menu to maximize this example.\par
+\par
+    // Disable Banding //\par
+    Pego1.GridBands := False;\par
+\par
+    Pego1.PrepareImages := True;\par
+\par
+    // Pass Data //\par
+    Pego1.Subsets := 32;\par
+    Pego1.Points := 100;\par
+\par
+    For s := 0 To 31 do\par
+    begin\par
+        fRnd := (Random * 9) + 2;\par
+\par
+        // pass 100 points of subset data //\par
+        For p := 0 To 99 do\par
+        begin\par
+            Pego1.YData[s, p] := 10.0 + (0.6 * fRnd * Sin(fRnd * p));\par
+        end;\par
+\par
+        // set subsetlabel //\par
+        Pego1.SubsetLabels[s] := 'Sin' + Format('#.1', [fRnd]);\par
+    end;\par
+\par
+    // Set various axis parameters //\par
+    For axis := 0 To 15 do\par
+    begin\par
+        Pego1.WorkingAxis := axis;\par
+        Pego1.ShowYAxis := gGridLabels;\par
+\par
+        // set y axis label //\par
+        Pego1.YAxisLabel := Format('Axis %d',[(axis+1)]);\par
+\par
+        Pego1.ManualScaleControlY := gManualMinAndMax;\par
+        Pego1.ManualMinY := 0;\par
+        Pego1.ManualMaxY := 20;\par
+\par
+        Pego1.PlottingMethod := gLine;\par
+        Pego1.ComparisonSubsets := 1;\par
+        Pego1.PlottingMethodII := gStep2;\par
+    end;\par
+\par
+    // Set various subset parameters //\par
+    dwArray[0] := Pego1.PEargb(79, 0, 32, 198);\par
+    dwArray[1] := Pego1.PEargb(199, 225, 0, 0);\par
+\par
+    For s := 0 To 31 do\par
+    begin\par
+        Pego1.SubsetLineTypes[s] := PELT_THINSOLID;\par
+        Pego1.SubsetColors[s] := dwArray[nColorIndex];\par
+        nColorIndex := nColorIndex + 1;\par
+        If (nColorIndex > 1) Then nColorIndex := 0;\par
+    end;\par
+\par
+    // Set various point parameters //\par
+    For p := 0 To 99 do\par
+    begin\par
+        Pego1.PointLabels[p] := Format('Data#%d',[(p+1)]);\par
+    end;\par
+\par
+    Pego1.ForceVerticalPoints := gHorizontal;\par
+\par
+    // Various other features //\par
+    Pego1.FixedFonts := True;\par
+    Pego1.FontSize := gSmall;\par
+    Pego1.FontSizeGlobalCntl := 0.9;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gLightNoBorder;\par
+\par
+    Pego1.SimplePointLegend := True;\par
+    Pego1.SimpleLineLegend := True;\par
+    Pego1.LegendStyle := gInsideOverlap;\par
+\par
+    // Split up subsets among different axes //\par
+    Pego1.MultiAxesSubsets[0] := 2;\par
+    Pego1.MultiAxesSubsets[1] := 2;\par
+    Pego1.MultiAxesSubsets[2] := 2;\par
+    Pego1.MultiAxesSubsets[3] := 2;\par
+    Pego1.MultiAxesSubsets[4] := 2;\par
+    Pego1.MultiAxesSubsets[5] := 2;\par
+    Pego1.MultiAxesSubsets[6] := 2;\par
+    Pego1.MultiAxesSubsets[7] := 2;\par
+    Pego1.MultiAxesSubsets[8] := 2;\par
+    Pego1.MultiAxesSubsets[9] := 2;\par
+    Pego1.MultiAxesSubsets[10] := 2;\par
+    Pego1.MultiAxesSubsets[11] := 2;\par
+    Pego1.MultiAxesSubsets[12] := 2;\par
+    Pego1.MultiAxesSubsets[13] := 2;\par
+    Pego1.MultiAxesSubsets[14] := 2;\par
+    Pego1.MultiAxesSubsets[15] := 2;\par
+\par
+    Pego1.MultiAxisStyle := gSeparateAxes;\par
+    Pego1.MultiAxisSeparatorSize := 65;\par
+    Pego1.MultiAxisStyleMenu := gShowMenu;\par
+\par
+    Pego1.MainTitle := '16 Axes with axis forecolor backcolor mouse control';\par
+    Pego1.SubTitle := '';\par
+    Pego1.FocalRect := False;\par
+    Pego1.AllowZooming := gHorzPlusVertZooming;\par
+    Pego1.ZoomStyle := gRO2NOT;\par
+\par
+    Pego1.AllowStep := True;\par
+    Pego1.DataShadows := gNo3D;\par
+\par
+    Pego1.GradientBars := 12;\par
+    Pego1.TextShadows := gShadowNoText;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.SubTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.LineShadows := True;\par
+    Pego1.PointsToGraph := 50;\par
+\par
+    Pego1.GraphForeColor := Pego1.PEargb(50, 0, 0, 0);\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.GridStyle := gDot;\par
+    Pego1.BorderTypes := gSingleLine;\par
+\par
+    // v7.2 new features //\par
+    Pego1.PointGradientStyle := gVerticalAscentInversePG;\par
+    Pego1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+    Pego1.LineSymbolThickness := 3;\par
+    Pego1.AreaBorder := 1;\par
+\par
+    // export defaults //\par
+    Pego1.DpiX := 600;\par
+    Pego1.DpiY := 600;\par
+\par
+    Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+    Pego1.ExportTypeDef := gExportPng;\par
+    Pego1.ExportDestDef := gExportToClipboard;\par
+    Pego1.ExportUnitXDef := '1280';\par
+    Pego1.ExportUnitYDef := '768';\par
+    Pego1.ExportImageDpi := 300;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+\par
+\{\par
+     //////////////////////////////////\par
+     // MouseMove Event Handler      //\par
+     //////////////////////////////////\par
+     If Pego1.ProcessingMouseMove = True Then Exit;\par
+\par
+    // If mouse is inside an axis, change it's back color to WHITE //\par
+    // Determine if mouse is within an axis //\par
+    nChangedAxisColor := -1;\par
+\par
+    // get last mouse location within control //'\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    For a := 0 To 15 do\par
+    begin\par
+        // test to see if this is within axis area //'\par
+        Pego1.WorkingAxis := a;\par
+        PEvgetW(Pego1.hObject, PEP_rectAXIS, @r);\par
+\par
+        If( pt.X > r.Left) And (pt.X < r.Right) And (pt.Y > r.Top) And (pt.Y < r.Bottom) Then\par
+        begin\par
+            If Pego1.AxisBackColor <> Pego1.PEargb(255, 255, 255, 255) Then\par
+            begin\par
+                Pego1.AxisBackColor := Pego1.PEargb(255, 255, 255, 255);\par
+                Pego1.AxisForeColor := Pego1.PEargb(255, 255, 0, 0);\par
+                nChangedAxisColor := a;\par
+                break;\par
+            end;\par
+        end;\par
+    end;\par
+\par
+    If (nChangedAxisColor <> -1) Then\par
+    begin\par
+        For a := 0 To 15 do\par
+        begin\par
+            If (a <> nChangedAxisColor) Then\par
+            begin\par
+                Pego1.WorkingAxis := a;\par
+                Pego1.AxisBackColor := 1;\par
+                Pego1.AxisForeColor := 1;\par
+            end;\par
+        end;\par
+        Pego1.PEactions := ePEactions.gResetImage;\par
+        Pego1.PEactions := ePEactions.gInvalidateImage;\par
+    end;\par
+ \}\par
+\par
+\par
+  End\par
+Else If nChart = 33 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{033  Graph showing subset order control\}\par
+\par
+    //! Version 6 adds additional support to ease selecting and ordering subsets.\par
+    //! New features SubsetsToShow and SubsetsToTable control visibility\par
+    //! of subsets within the chart and table regions.\par
+    //! SubsetsToShow not only controls visibility, but can also control the order.\par
+    //! RandomSubsetsToGraph can also control order and visibility of subsets plotted.\par
+\par
+    CreateSimpleGraph;\par
+\par
+    Pego1.PlottingMethod := gBarStacked;\par
+    Pego1.QuickStyle := gLightShadow;\par
+    Pego1.LegendStyle := gOneLine;\par
+    Pego1.LegendLocation := gLegendLeft;\par
+\par
+    // Controlling order how subsets are plotted //\par
+    Pego1.RandomSubsetsToGraph[0] := 3;\par
+    Pego1.RandomSubsetsToGraph[1] := 2;\par
+    Pego1.RandomSubsetsToGraph[2] := 1;\par
+    Pego1.RandomSubsetsToGraph[3] := 0;\par
+\par
+    // Controlling order of items in legend //\par
+    Pego1.SubsetsToLegend[0] := 0;\par
+    Pego1.SubsetsToLegend[1] := 1;\par
+    Pego1.SubsetsToLegend[2] := 2;\par
+    Pego1.SubsetsToLegend[3] := 3;\par
+\par
+    // Controlling order of items in table below chart //\par
+    Pego1.SubsetsToTable[0] := 0;\par
+    Pego1.SubsetsToTable[1] := 1;\par
+    Pego1.SubsetsToTable[2] := 2;\par
+    Pego1.SubsetsToTable[3] := 3;\par
+\par
+    Pego1.PEactions := gReinitAndReset;\par
+\par
+ End\par
+Else If nChart = 34 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{034  Graph showing moveable table\}\par
+\par
+    //! Pixel located table annotations with built in logic to allow\par
+    //! user to move the table annotation.  See TAMoveable set to True, and\par
+    //! TALocation set to InsidePixelUnits.  Try clicking and dragging table.\par
+\par
+    //! Additional support to ease selecting and ordering subsets.\par
+    //! New features SubsetsToShow and SubsetsToTable control visibility\par
+    //! of subsets within the chart and table regions.\par
+    //! SubsetsToShow not only controls visibility, but can also control the order.\par
+    //! RandomSubsetsToGraph can also control order and visibility of subsets plotted.\par
+\par
+    CreateSimpleGraph;\par
+\par
+    Pego1.PlottingMethod := gHorzStackedBar;\par
+    Pego1.LegendStyle := gOneLine;\par
+    Pego1.LegendLocation := gLegendTop;\par
+    Pego1.ImageAdjustBottom := 50;\par
+    Pego1.YAxisLabel := ' ';\par
+    Pego1.QuickStyle := gLightLine;\par
+    Pego1.DataShadows := gWithThreeD;\par
+\par
+    // Control which subsets to show //\par
+    // Value [1 - 9] show subset, subsets with a value of 9 plot before values of 1\par
+    // Value [0] hides subset\par
+    Pego1.SubsetsToShow[0] := 2; // 2 is just a weighted value, it could be anything [1-9]\par
+    Pego1.SubsetsToShow[1] := 2;\par
+    Pego1.SubsetsToShow[2] := 0;\par
+    Pego1.SubsetsToShow[3] := 2;\par
+\par
+    // Construct a simple table annotation //\par
+    Pego1.WorkingTable := 0;\par
+    Pego1.TARows := 5;\par
+    Pego1.TAColumns := 2;\par
+\par
+    // Pass the table text //\par
+    Pego1.TAText[0, 0] := 'Subset ';\par
+    Pego1.TAText[1, 0] := Pego1.SubsetLabels[0];\par
+    Pego1.TAText[2, 0] := Pego1.SubsetLabels[1];\par
+    Pego1.TAText[3, 0] := Pego1.SubsetLabels[2];\par
+    Pego1.TAText[4, 0] := Pego1.SubsetLabels[3];\par
+    Pego1.TAText[0, 1] := 'Visible? ';\par
+\par
+    // Set to cell types and attributes //\par
+    Pego1.TAType[1, 1] := PEGAT_LARGESQUARESOLID;\par
+    Pego1.TAType[2, 1] := PEGAT_LARGESQUARESOLID;\par
+    Pego1.TAType[3, 1] := PEGAT_LARGESQUARE;\par
+    Pego1.TAType[4, 1] := PEGAT_LARGESQUARESOLID;\par
+\par
+    Pego1.TAColor[1, 1] := Pego1.PEargb(255, 255, 0, 0);\par
+    Pego1.TAColor[2, 1] := Pego1.PEargb(255, 255, 0, 0);\par
+    Pego1.TAColor[3, 1] := Pego1.PEargb(255, 255, 0, 0);\par
+    Pego1.TAColor[4, 1] := Pego1.PEargb(255, 255, 0, 0);\par
+\par
+    Pego1.TAHotSpot[1, 1] := True;\par
+    Pego1.TAHotSpot[2, 1] := True;\par
+    Pego1.TAHotSpot[3, 1] := True;\par
+    Pego1.TAHotSpot[4, 1] := True;\par
+\par
+    // Other Table Related Properties ///\par
+    Pego1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsidePixelUnits;\par
+    Pego1.TAX := 50; // initial setting, we set again further down in code.\par
+    Pego1.TAY := 50;\par
+    Pego1.TAMoveable := gTAMoveableFull;\par
+\par
+    Pego1.TABackColor := Pego1.PEargb(129, 255, 255, 255);\par
+    Pego1.TAHeaderRows := 0;\par
+    Pego1.TAHeaderColumn := False;\par
+    Pego1.TABorders := gInset;\par
+    Pego1.TATextSize := 85;\par
+\par
+    // Construct a simple text table annotation //\par
+    Pego1.WorkingTable := 1;\par
+    Pego1.TARows := 1;\par
+    Pego1.TAColumns := 1;\par
+    Pego1.TATextMode := True;\par
+\par
+    tstr := 'This is a test to see how this works. ';\par
+    tstr := tstr + Chr(10);\par
+    tstr := tstr + 'Second paragraph, this is a test to see how this works. ';\par
+    tstr := tstr + Chr(10);\par
+    tstr := tstr + 'Third paragraph, this is a test to see how this works.';\par
+    Pego1.TAText[0, 0] := tstr;\par
+\par
+    // Other Table Related Properties ///\par
+    Pego1.ShowTableAnnotation := True;\par
+    Pego1.TALocation := gInsidePixelUnits;\par
+    Pego1.TAX := 50; // initial setting, we set again further down in code.\par
+    Pego1.TAY := 50;\par
+    Pego1.TAWidth := 150;\par
+    Pego1.TAMoveable := gTAMoveableFull;\par
+    Pego1.TABackColor := Pego1.PEargb(159, 255, 255, 255);\par
+    Pego1.TAHeaderRows := 0;\par
+    Pego1.TAHeaderColumn := False;\par
+    Pego1.TATextSize := 95;\par
+    Pego1.TABorders := gInset;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasGraphics := True;\par
+    Pego1.AntiAliasText := True;\par
+\par
+    // Initialize chart to get graph border rectangle //\par
+    Pego1.PEactions := gReinitAndReset;\par
+\par
+    PEvgetW(Pego1.hObject, PEP_rectGRAPH, @tr);\par
+\par
+    Pego1.WorkingTable := 0;\par
+    Pego1.TAX := tr.Right - 150;\par
+    Pego1.TAY := tr.Top + 25;\par
+\par
+    Pego1.WorkingTable := 1;\par
+    Pego1.TAX := tr.Left + 50;\par
+    Pego1.TAY := tr.Top + 25;\par
+\par
+    Pego1.WorkingTable := 0;\par
+\par
+    Pego1.PEactions := gReinitAndReset;\par
+\par
+    ////////////////////////////////////\par
+    // TableAnnotation Hot Spot Event //\par
+    ////////////////////////////////////\par
+\{\par
+    // Look for table hot spot and change which subsets are visible //\par
+    // hsd : THotSpotData  // Add to Var section\par
+\par
+    // get last mouse location within control //\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pego1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pego1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    If (hsd.nHotSpotType = PEHS_TABLEANNOTATION + 0) Then // zero represents first table annotation\par
+    begin\par
+        // If TYPE is SQUARESOLID, change to SQUARE and vice versa. //\par
+        nType := Pego1.TAType[hsd.w1, hsd.w2];\par
+\par
+        If (nType = PEGAT_LARGESQUARE) Then\par
+        begin\par
+            Pego1.TAType[hsd.w1, hsd.w2] := PEGAT_LARGESQUARESOLID;\par
+            Pego1.SubsetsToShow[hsd.w1-1] := 2;   // 2 is just an arbitrary weight\par
+        end\par
+        Else\par
+        begin\par
+            Pego1.TAType[hsd.w1, hsd.w2] := PEGAT_LARGESQUARE;\par
+            Pego1.SubsetsToShow[hsd.w1-1] := 0;   // 0 hides subset\par
+        end;\par
+\par
+        Pego1.PEactions := ePEactions.gReinitAndReset;\par
+    end;\par
+ \}\par
+\par
+  End\par
+Else If nChart = 35 Then\par
+  Begin\par
+//*******************************************************************\par
+//******************************************************************//\par
+\{035  Graph showing Demographic Pyramid\}\par
+\par
+    //! This feature represents a new mode of drawing data and axes, a special case\par
+    //! not compatible with mixing plotting styles and full zooming.\par
+    //! Best to set AllowPlotCustomization = False, and\par
+    //! AllowZooming = PEAZ_NONE or PEAZ_HORIZONTAL.\par
+    //! Also note graph annotations take special positioning as demonstrated below.\par
+\par
+    CreateSimpleGraph;\par
+\par
+    // Change Data //\par
+    Pego1.Subsets := 2;\par
+    Pego1.Points := 17;\par
+\par
+    // Set Title //\par
+    Pego1.MainTitle := 'Demographic Pyramid';\par
+\par
+    // Create some Y Data //\par
+    Pego1.YData[0, 0] := 0.1; Pego1.YData[0, 1] := 0.15; Pego1.YData[0, 2] := 0.5;\par
+    Pego1.YData[0, 3] := 0.6; Pego1.YData[0, 4] := 0.7; Pego1.YData[0, 5] := 1.5;\par
+    Pego1.YData[0, 6] := 1.2; Pego1.YData[0, 7] := 1.7; Pego1.YData[0, 8] := 1.8;\par
+    Pego1.YData[0, 9] := 2.2; Pego1.YData[0, 10] := 3.2; Pego1.YData[0, 11] := 4.3;\par
+    Pego1.YData[0, 12] := 5.1; Pego1.YData[0, 13] := 6.5; Pego1.YData[0, 14] := 7.2;\par
+    Pego1.YData[0, 15] := 8.3; Pego1.YData[0, 16] := 9.3;\par
+\par
+    Pego1.YData[1, 0] := 0.3; Pego1.YData[1, 1] := 0.35; Pego1.YData[1, 2] := 0.36;\par
+    Pego1.YData[1, 3] := 0.5; Pego1.YData[1, 4] := 0.6; Pego1.YData[1, 5] := 0.8;\par
+    Pego1.YData[1, 6] := 1.1; Pego1.YData[1, 7] := 1.9; Pego1.YData[1, 8] := 2.9;\par
+    Pego1.YData[1, 9] := 3.6; Pego1.YData[1, 10] := 4.2; Pego1.YData[1, 11] := 5.3;\par
+    Pego1.YData[1, 12] := 6.1; Pego1.YData[1, 13] := 7.15; Pego1.YData[1, 14] := 8.2;\par
+    Pego1.YData[1, 15] := 9.3; Pego1.YData[1, 16] := 9.3;\par
+\par
+    // Set Subset Labels //\par
+    Pego1.SubsetLabels[0] := 'MALE';\par
+    Pego1.SubsetLabels[1] := 'FEMALE';\par
+\par
+    // Set Legend to Bottom //\par
+    Pego1.LegendLocation := gLegendBottom;\par
+\par
+    // Set Legend Style to Two Line, by default will position next to each half //\par
+    Pego1.LegendStyle := gTwoLine;\par
+\par
+    // Set Point Labels //\par
+    Pego1.PointLabels[0] := '80+';\par
+    Pego1.PointLabels[1] := '75-79';\par
+    Pego1.PointLabels[2] := '70-74';\par
+    Pego1.PointLabels[3] := '65-69';\par
+    Pego1.PointLabels[4] := '60-64';\par
+    Pego1.PointLabels[5] := '55-59';\par
+    Pego1.PointLabels[6] := '50-54';\par
+    Pego1.PointLabels[7] := '45-49';\par
+    Pego1.PointLabels[8] := '40-44';\par
+    Pego1.PointLabels[9] := '35-39';\par
+    Pego1.PointLabels[10] := '30-34';\par
+    Pego1.PointLabels[11] := '25-29';\par
+    Pego1.PointLabels[12] := '20-24';\par
+    Pego1.PointLabels[13] := '15-19';\par
+    Pego1.PointLabels[14] := '10-14';\par
+    Pego1.PointLabels[15] := '05-09';\par
+    Pego1.PointLabels[16] := '00-04';\par
+\par
+    // Set plotting method //\par
+    Pego1.PlottingMethod := gDemographicPyramid;\par
+\par
+    // Disable incompatible features //\par
+    Pego1.AllowZooming := gNoZooming;\par
+    Pego1.AllowPlotCustomization := False;\par
+\par
+    // Auto scaling is supported, and note how manually scaling axes, causes a mirrored effect //\par
+    Pego1.ManualMinY := 0;\par
+    Pego1.ManualMaxY := 10;\par
+    Pego1.ManualScaleControlY := gManualMinAndMax;\par
+\par
+    // Place axis on bottom, since horizontal mode, right y axis is bottom y axis //\par
+    Pego1.YAxisOnRight := True;\par
+\par
+    // Hide Y axis label //\par
+    Pego1.ShowYAxis := gNoLabels;\par
+\par
+    // Note below how graph annotations are positioned on each side of chart. //\par
+    Pego1.GraphAnnotationX[0] := 3;\par
+    Pego1.GraphAnnotationY[0] := 5 - (Pego1.YData[0, 2] / 2);    // 5 is middle of axis, (10-0) / 2, and note subtracting half\par
+    Pego1.GraphAnnotationType[0] := PEGAT_POINTER_ARROW_SMALL;  // of value to position data\par
+    Pego1.GraphAnnotationText[0] := 'Arrow 1';\par
+    Pego1.GraphAnnotationColor[0] := Pego1.PEargb(255, 198, 0, 0);\par
+\par
+    Pego1.GraphAnnotationX[1] := 8;\par
+    Pego1.GraphAnnotationY[1] := 5 + (Pego1.YData[1, 7] / 2);     // 5 is middle of axis, (10-0) / 2, and note adding half\par
+    Pego1.GraphAnnotationType[1] := PEGAT_POINTER_ARROW_SMALL;   // of value to position data\par
+    Pego1.GraphAnnotationText[1] := 'Arrow 2';\par
+    Pego1.GraphAnnotationColor[1] := Pego1.PEargb(255, 0, 198, 198);\par
+\par
+    Pego1.ShowAnnotations := True;\par
+\par
+    // Increase annotation font //\par
+    Pego1.GraphAnnotationTextSize := 100;\par
+\par
+    // Designate subsets obstacles //\par
+    Pego1.SubsetObstacles[0] := True;\par
+    Pego1.SubsetObstacles[1] := True;\par
+\par
+    // Allow user to move ArrowPointer annotation //\par
+    Pego1.GraphAnnotMoveable := gPointerMoveable;\par
+    Pego1.AllowGraphAnnotHotSpots := True;\par
+\par
+    // Increase all font sizes //\par
+    Pego1.FontSizeGlobalCntl := 1.2;\par
+\par
+    // No text shadows //\par
+    Pego1.TextShadows := gShadowNoText;\par
+\par
+    // Set colors //\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := gDarkNoBorder;\par
+\par
+    // Make bars 3D //\par
+    Pego1.DataShadows := gWithThreeD;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasGraphics := True;\par
+    Pego1.AntiAliasText := True;\par
+    Pego1.ImageAdjustLeft := 75;\par
+\par
+    Pego1.PEactions := gReinitAndReset;\par
+\par
+\par
+End\par
+Else If nChart = 99 Then\par
+  Begin\par
+\par
+//**************************************************\par
+\par
+End;\par
+\par
+Pego1.PEactions := ePEactions(0);\par
+\par
+if (Form2.Visible = False) then Form2.Show;\par
+\par
+End; //end create all graphs for form 2//\par
+\par
+\par
+////////////////////////////////////\par
+//CREATE SIMPLE GRAPH//\par
+Procedure TForm2.CreateSimpleGraph;\par
+var\par
+    s : Integer;\par
+    p : Integer;\par
+\par
+begin\par
+\par
+    // Enable Bar Glass Effect //\par
+    Pego1.BarGlassEffect := True;\par
+\par
+    // Enable Plotting style gradient and bevel features //\par
+    Pego1.AreaGradientStyle := gRadialBottomRightPG;\par
+    Pego1.AreaBevelStyle := gMediumSmooth;\par
+    Pego1.SplineGradientStyle := gRadialBottomRightPG;\par
+    Pego1.SplineBevelStyle := gMediumSplineBevel;\par
+\par
+    // v7.2 new features //\par
+    Pego1.PointGradientStyle := gVerticalAscentInversePG;\par
+    Pego1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+    Pego1.LineSymbolThickness := 3;\par
+    Pego1.AreaBorder := 1;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    // Prepare images in memory //\par
+    Pego1.PrepareImages := True;\par
+    Pego1.CacheBmp := True;\par
+\par
+    // Set Subsets, Points, and fill with YData //\par
+    Pego1.Subsets := 4;\par
+    Pego1.Points := 12;\par
+    For s := 0 To 3 do  //4-1//\par
+        For p := 0 To 11 do  //12-1//\par
+            Pego1.YData[s, p] := (p+1)*50 + (Random*250) + 700 - (s*140) + (Random * 250.0)/250.0;\par
+\par
+    Pego1.DataShadows := gWithShadows;\par
+    Pego1.FocalRect := False;\par
+    Pego1.PlottingMethod := gArea;\par
+    Pego1.GridLineControl := gYPlusXAxis;\par
+    Pego1.GridStyle := gDot;\par
+    Pego1.AllowRibbon := True;\par
+    Pego1.AllowZooming := gHorzPlusVertZooming;\par
+    Pego1.ZoomStyle := gRO2NOT;\par
+\par
+    // Enable middle mouse dragging //\par
+    Pego1.MouseDraggingY := True;\par
+    Pego1.MouseDraggingX := True;\par
+\par
+    Pego1.MainTitle := 'Units Sold per Month';\par
+    Pego1.SubTitle := '';\par
+    Pego1.YAxisLabel := 'Units Sold';\par
+    Pego1.XAxisLabel := 'Month';\par
+\par
+    // Set SubsetLabels property array for 4 subsets //\par
+    Pego1.SubsetLabels[0] := 'Texas';\par
+    Pego1.SubsetLabels[1] := 'Florida';\par
+    Pego1.SubsetLabels[2] := 'Washington';\par
+    Pego1.SubsetLabels[3] := 'California';\par
+\par
+    // Set PointLabels property array for 12 points //\par
+    Pego1.PointLabels[0] := 'January';\par
+    Pego1.PointLabels[1] := 'February';\par
+    Pego1.PointLabels[2] := 'March';\par
+    Pego1.PointLabels[3] := 'April';\par
+    Pego1.PointLabels[4] := 'May';\par
+    Pego1.PointLabels[5] := 'June';\par
+    Pego1.PointLabels[6] := 'July';\par
+    Pego1.PointLabels[7] := 'August';\par
+    Pego1.PointLabels[8] := 'September';\par
+    Pego1.PointLabels[9] := 'October';\par
+    Pego1.PointLabels[10] := 'November';\par
+    Pego1.PointLabels[11] := 'December';\par
+\par
+    // this is how to change subset colors //\par
+    Pego1.SubsetColors[0] := Pego1.PEargb(128, 198, 0, 0);\par
+    Pego1.SubsetColors[1] := Pego1.PEargb(128, 0, 198, 198);\par
+    Pego1.SubsetColors[2] := Pego1.PEargb(128, 198, 198, 0);\par
+    Pego1.SubsetColors[3] := Pego1.PEargb(128, 0, 198, 0);\par
+\par
+    // this is how to change line types //\par
+    Pego1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[2] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[3] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[4] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[5] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[6] := PELT_MEDIUMSOLID;\par
+    Pego1.SubsetLineTypes[7] := PELT_MEDIUMSOLID;\par
+\par
+    // this is how to change point types //\par
+    Pego1.SubsetPointTypes[0] := PEPT_DOTSOLID;\par
+    Pego1.SubsetPointTypes[1] := PEPT_UPTRIANGLESOLID;\par
+    Pego1.SubsetPointTypes[2] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[3] := PEPT_DOWNTRIANGLESOLID;\par
+    Pego1.SubsetPointTypes[4] := PEPT_DOTSOLID;\par
+    Pego1.SubsetPointTypes[5] := PEPT_SQUARESOLID;\par
+    Pego1.SubsetPointTypes[6] := PEPT_DIAMONDSOLID;\par
+    Pego1.SubsetPointTypes[7] := PEPT_UPTRIANGLESOLID;\par
+\par
+    Pego1.SimplePointLegend:=True;\par
+    Pego1.SimpleLineLegend:=True;\par
+    Pego1.LegendStyle:=gOneLine;\par
+\par
+    // Allow stacked type graphs //\par
+    Pego1.NoStackedData := False;\par
+\par
+    // Various other features //\par
+    Pego1.FixedFonts := True;\par
+\par
+    Pego1.BitmapGradientMode := True;\par
+    Pego1.QuickStyle := eQuickStyle.gDarkNoBorder;\par
+\par
+    Pego1.GradientBars := 8;\par
+    Pego1.LineShadows := True;\par
+    Pego1.MainTitleBold := True;\par
+    Pego1.SubTitleBold := True;\par
+    Pego1.LabelBold := True;\par
+    Pego1.TextShadows := gShadowBoldText;\par
+    Pego1.FontSize := gLarge;\par
+\par
+    Pego1.DataPrecision := gOneDecimal;\par
+    Pego1.GraphPlusTable := gGraphPlusTable;\par
+    Pego1.MarkDataPoints := False;\par
+\par
+    Pego1.ImageAdjustLeft := 20;\par
+    Pego1.ImageAdjustRight := 20;\par
+    Pego1.ImageAdjustBottom := 10;\par
+\par
+    // Set various export defaults //\par
+    Pego1.DpiX := 600;\par
+    Pego1.DpiY := 600;\par
+\par
+    Pego1.ExportSizeDef := gExportNoSizeOrPixels;\par
+    Pego1.ExportTypeDef := gExportPng;\par
+    Pego1.ExportDestDef := gExportToClipboard;\par
+    Pego1.ExportUnitXDef := '1280';\par
+    Pego1.ExportUnitYDef := '768';\par
+    Pego1.ExportImageDpi := 300;\par
+    Pego1.AllowSvgExport := True;\par
+\par
+    Pego1.RenderEngine := gDirect2D;\par
+    Pego1.AntiAliasGraphics := True;\par
+    Pego1.AntiAliasText := True;\par
+\par
+    // Always call PEactions at end **'\par
+    // as this func is designed for pre-initialization, avoid Pego1.PEactions = REINITIALIZE_RESETIMAGE till later\par
+\par
+End;\par
+Procedure TForm2.LoadData(sName: string);\par
+var\par
+    d : double;\par
+    szFile : string;\par
+    szLabel: WideString;\par
+    szLine: WideString;\par
+    f1 : single;\par
+    f2 : single;\par
+    f3 : single;\par
+    f4 : single;\par
+    f5 : single;\par
+    pfile : textfile;\par
+    n1 : string;\par
+    n2 : string;\par
+    n3 : string;\par
+    n4 : string;\par
+    n5 : string;\par
+    szYear: string;\par
+    szMonth: string;\par
+    szDay: string;\par
+    szDate: string;\par
+    nCnt: Integer;\par
+    nPos1: Integer;\par
+    nCnt2: Integer;\par
+    szParsedStrings: array[0 .. 8] of string;\par
+\par
+    ID : Integer;\par
+    f : single;\par
+    Days : LongInt;\par
+    pnt : Integer;\par
+    i : Integer;\par
+    Total : double;\par
+    Total2 : double;\par
+    X : Integer;\par
+    SMAfBB : double;\par
+    BBNum : double;\par
+    pYD3 : ^YD3;\par
+\par
+    RS : Single;\par
+    RSI : Single;\par
+    LowerCount : Integer;\par
+    UpperCount : Integer;\par
+    pUpperArray : ^UpperArray;\par
+    pLowerArray : ^LowerArray;\par
+\par
+    SwFac : Integer;\par
+    Dperiod : Integer;\par
+    q : Integer;\par
+    LowMin : Single;\par
+    HighMax : Single;\par
+    SlowK : Single;\par
+    Dfactor : Single;\par
+    PercentD : Single;\par
+    pSlowOC : ^SlowOC;\par
+    pKperiod : ^Kperiod;\par
+    pHigh : ^HighA;\par
+    pLow : ^LowA;\par
+\par
+begin\par
+    // Function to load financial data from a comma delimited file //\par
+\par
+    Pego1.Subsets := 11;\par
+    Pego1.Points := 1000; // setting to a large value, later we will reduce //\par
+\par
+    Pego1.UsingXDataII := True;\par
+\par
+    szFile := sName + '.txt';\par
+\par
+    // Open Data File //\par
+    nCnt := 0;\par
+    assignfile(pfile, szFile);\par
+    reset(pfile);\par
+\par
+    While Eof(pfile) <> true do  \{Loop until end of file.\}\par
+    Begin\par
+        // Parse out different fields //\par
+        readln(pfile, szLine);\par
+\par
+        // Parse out fields within line //\par
+\par
+        nCnt2 := 0;\par
+        nPos1 := Pos(',', szLine);\par
+\par
+        while nPos1 <> 0 do\par
+        begin\par
+             szParsedStrings[nCnt2] := LeftStr(szLine, nPos1 - 1);\par
+             szLine := RightStr(szLine, Length(szLine) - nPos1);\par
+             nPos1 := Pos(',', szLine);\par
+             nCnt2 := nCnt2 + 1;\par
+        end;\par
+\par
+        szParsedStrings[nCnt2] := szLine;\par
+\par
+        szDate := szParsedStrings[0];\par
+        n1 := szParsedStrings[1];\par
+        n2 := szParsedStrings[2];\par
+        n3 := szParsedStrings[3];\par
+        n4 := szParsedStrings[4];\par
+        n5 := szParsedStrings[5];\par
+        szYear := Copy(szDate, 1, 2);\par
+        szMonth := Copy(szDate, 3, 2);\par
+        szDay := Copy(szDate, 5, 2);\par
+        f1 := StrToFloat(n1);\par
+        f2 := StrToFloat(n2);\par
+        f3 := StrToFloat(n3);\par
+        f4 := StrToFloat(n4);\par
+        f5 := StrToFloat(n5);\par
+\par
+        szLabel := szMonth + '/' + szDay + '/' + szYear;\par
+        d := StrToDate(szLabel) + 0.5;\par
+        Pego1.XDataII[0, nCnt] := d;\par
+\par
+        // Pass OHLC Volume Data //\par
+        Pego1.YData[0, nCnt] := f2;\par
+        Pego1.YData[1, nCnt] := f3;\par
+        Pego1.YData[2, nCnt] := f1;\par
+        Pego1.YData[3, nCnt] := f4;\par
+        Pego1.YData[7, nCnt] := f5;\par
+\par
+        // Set PointLabel data, string representation of date //\par
+        Pego1.PointLabels[nCnt] := szLabel;\par
+\par
+        // Store first date as StartTime property.  Critical!\par
+        if (nCnt = 0) then\par
+            Pego1.StartTime := d;\par
+\par
+        nCnt := nCnt + 1;\par
+    end;\par
+\par
+    // We now have data, let's make some studies //\par
+\par
+    ////////////////////////////////////////////////////////////////////\par
+    // Bollinger Bands //\par
+    /////////////////////\par
+\par
+    GetMem(pYD3, SizeOf(Single) * nCnt);\par
+\par
+    ID := 0;\par
+    X := 1;\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+        pYD3[pnt] := Pego1.YData[3, pnt];\par
+\par
+    // Middle Band = SMA\par
+    Days := 20;\par
+    For pnt := 0 To (nCnt-Days-1) do\par
+    begin\par
+        Total := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            Total := Total + pYD3[i];\par
+        f := Total / Days;\par
+        Pego1.YData[5, pnt + Days - 1] := f;\par
+    end;\par
+\par
+    // Upper Band = Middle Band + [Standard Deviation * Square Root\{[Sum for x Days((Closing Price - Middle Band)^2)]/Days]\par
+    For pnt :=0 To (nCnt-Days-1) do\par
+    begin\par
+        Total := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            Total := Total + pYD3[i];\par
+        SMAfBB := Total / Days;\par
+        // Find sum of Closing Price minus SMA over days and square\par
+        BBNum := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            BBNum := ((pYD3[i] - SMAfBB) * (pYD3[i] - SMAfBB)) + BBNum;\par
+        f:= SMAfBB + 2.0 * Sqrt(BBNum / Days);\par
+        Pego1.YData[4, pnt+Days-1] := f;  // upper\par
+    end;\par
+\par
+    // Lower Band = Middle Band - [Standard Deviation * Square Root\{[Sum for x Days((Closing Price - Middle Band)^2)]/Days]\par
+    For pnt := 0 To (nCnt-Days-1) do\par
+    begin\par
+        Total := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            Total := Total + pYD3[i];\par
+        SMAfBB := Total / Days;\par
+        // Find sum of Closing Price minus SMA over days and square\par
+        BBNum := 0;\par
+        For i := 0+pnt To Days+pnt-1 do\par
+            BBNum := ((pYD3[i] - SMAfBB) * (pYD3[i] - SMAfBB)) + BBNum;\par
+        f := SMAfBB - 2.0 * Sqrt(BBNum / Days);\par
+        Pego1.YData[6, pnt+Days-1] := f;  // lower\par
+    end;\par
+\par
+    ////////////////////////////////////////////////////////////////////////////////////\par
+    // Relative Strength Index //\par
+    /////////////////////////////\par
+\par
+    X := 1;\par
+    RS := 0;\par
+    RSI := 0;\par
+    LowerCount := 0;\par
+    UpperCount := 0;\par
+\par
+    // How many days do you want to check\par
+    Days := 10;\par
+\par
+    GetMem(pUpperArray, SizeOf(Single) * nCnt);\par
+    GetMem(pLowerArray, SizeOf(Single) * nCnt);\par
+\par
+    For i :=1 To Days do\par
+    begin\par
+        if ((pYD3[i] - pYD3[i - 1]) < 0) Then\par
+        begin\par
+            pLowerArray[LowerCount] := (pYD3[i] - pYD3[i - 1]);\par
+            LowerCount := LowerCount + 1;\par
+        end\par
+        else\par
+        begin\par
+            pUpperArray[UpperCount] := (pYD3[i] - pYD3[i - 1]);\par
+            UpperCount := UpperCount + 1;\par
+        end;\par
+    end;\par
+\par
+    // Total the amounts over the period\par
+    Total := 0;\par
+    For i := 0 To LowerCount-1 do\par
+        Total := pLowerArray[i] + Total;\par
+\par
+    Total2 := 0;\par
+    For i := 0 To UpperCount-1 do\par
+        Total2 := pUpperArray[i] + Total2;\par
+\par
+    // Divide up by down\par
+    RS := (Total2 / Days) / (Abs(Total) / Days);\par
+\par
+    // Use the RSI formula\par
+    RSI := 100.0 - (100.0 / (1.0 + RS));\par
+    Pego1.YData[8, Days-1] := RSI;\par
+\par
+    For i := Days To nCnt-1 do\par
+    begin\par
+        if (pYD3[i] <> 0) and (pYD3[i - 1] <> 0) Then\par
+        begin\par
+            Total := Total * (Days - 1);\par
+            Total2 := Total2 * (Days - 1);\par
+\par
+            if ((pYD3[i] - pYD3[i - 1]) < 0) Then\par
+                Total := (pYD3[i] - pYD3[i - 1]) + Total\par
+            else\par
+                Total2 := (pYD3[i] - pYD3[i - 1]) + Total2;\par
+\par
+            Total := Total / Days;\par
+            Total2 := Total2 / Days;\par
+\par
+            RS := (Total2) / (Abs(Total));\par
+            RSI := 100.0 - (100.0 / (1.0 + RS));\par
+            Pego1.YData[8, Days-1+i] := RSI;\par
+        end;\par
+    end;\par
+\par
+    // Add a mid axis line annotation\par
+    Pego1.HorzLineAnnotation[0] := 50.0;\par
+    Pego1.HorzLineAnnotationAxis[0] := 2;\par
+    Pego1.HorzLineAnnotationType[0] := PELT_MEDIUMTHINSOLID;\par
+    Pego1.HorzLineAnnotationColor[0] := Pego1.PEargb(128, 198, 0, 0);\par
+    Pego1.ShowAnnotations := True;\par
+\par
+    // Set the working axis extents\par
+    Pego1.WorkingAxis := 2;\par
+    Pego1.ManualScaleControlY := gManualMinandMax;\par
+    Pego1.ManualMinY := 0;\par
+    Pego1.ManualMaxY := 100;\par
+\par
+    /////////////////////////////////////////////////////////////////////\par
+    // Stochastic Oscillator //\par
+    ///////////////////////////\par
+    LowMin := 9999.9;\par
+    HighMax := 0.0;\par
+\par
+    GetMem(pSlowOC, SizeOf(Single) * nCnt);\par
+    GetMem(pKperiod, SizeOf(Single) * nCnt);\par
+    GetMem(pHigh, SizeOf(Single) * nCnt);\par
+    GetMem(pLow, SizeOf(Single) * nCnt);\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+    begin\par
+        pHigh[pnt] := Pego1.YData[0, pnt];\par
+        pLow[pnt] := Pego1.YData[1, pnt];\par
+    end;\par
+\par
+    // How many days do you want to check\par
+    Days := 30;\par
+    SwFac := 1;\par
+    Dperiod := 15;\par
+\par
+    For pnt := 0 To (nCnt-Days-1) do\par
+    begin\par
+        For i := pnt To Days+pnt-1 do\par
+            if (pHigh[i] <> 0) Then\par
+                if (pHigh[i] > HighMax) Then\par
+                    HighMax := pHigh[i];\par
+\par
+        For i := pnt To Days+pnt-1 do\par
+            if (pLow[i] <> 0) Then\par
+                if (pLow[i] < LowMin) Then\par
+                    LowMin := pLow[i];\par
+\par
+        if (pYD3[Days - 1 + pnt] <> 0) Then\par
+            pKperiod[pnt] := ((pYD3[Days - 1 + pnt] - LowMin) / (HighMax - LowMin)) * 100.0;\par
+\par
+        LowMin := 9999.9;\par
+        HighMax := 0.0;\par
+    end;\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+    begin\par
+        SlowK := 0;\par
+        For q := pnt To SwFac+pnt-1 do\par
+            SlowK := pKperiod[q] + SlowK;\par
+\par
+        pSlowOC[pnt] := SlowK / SwFac;\par
+        Pego1.YData[9, Days + pnt + SwFac] := pSlowOC[pnt];\par
+    end;\par
+\par
+    For pnt := 0 To nCnt-1 do\par
+    begin\par
+        PercentD := 0;\par
+        For q := pnt To Dperiod+pnt-1 do\par
+            PercentD := pSlowOC[q] + PercentD;\par
+        Dfactor := PercentD / Dperiod;\par
+        Pego1.YData[10, Days + pnt + Dperiod] := Dfactor;\par
+    end;\par
+\par
+    // Set the working axis extents\par
+    Pego1.WorkingAxis := 3;\par
+    Pego1.ManualScaleControlY := gManualMinandMax;\par
+    Pego1.ManualMinY := 0;\par
+    Pego1.ManualMaxY := 100;\par
+\par
+    FreeMem(pYD3, SizeOf(Single) * nCnt);\par
+    FreeMem(pUpperArray, SizeOf(Single) * nCnt);\par
+    FreeMem(pLowerArray, SizeOf(Single) * nCnt);\par
+    FreeMem(pSlowOC, SizeOf(Single) * nCnt);\par
+    FreeMem(pKperiod, SizeOf(Single) * nCnt);\par
+    FreeMem(pHigh, SizeOf(Single) * nCnt);\par
+    FreeMem(pLow, SizeOf(Single) * nCnt);\par
+\par
+    Pego1.Points := nCnt;\par
+\par
+//**************************************************\par
+End;\par
+\par
+////////////////////////////////////\par
+procedure TForm2.FormResize(Sender: TObject);\par
+begin\par
+Pego1.left := 0;\par
+Pego1.top := 0;\par
+Pego1.Width := Form2.ClientWidth;\par
+Pego1.Height := Form2.ClientHeight;\par
+end;\par
+\par
+////////////////////////////////////////////\par
+procedure TForm2.Timer1Timer(Sender: TObject);\par
+\par
+Var\par
+    CurrentTime : WideString;\par
+    szCurrentTime: array[0..48] of WideChar;\par
+    NewData: array[0..1] Of Single;\par
+    nA : Integer;\par
+    nX: Integer;\par
+    nY : Integer;\par
+    fX : double;\par
+    fY : double;\par
+    r : TRECT;\par
+    s : WideString;\par
+    nChart : Integer;\par
+begin\par
+//check to see if a list item has been selected//\par
+if form1.list1.ItemIndex < 0 then exit;\par
+//pull the 3 digit number out of the index and convert it to an integer//\par
+s := form1.list1.items.strings[form1.list1.ItemIndex];\par
+s:=Copy(s,1,3);\par
+nChart := StrToInt(s);\par
+If nChart = 17 Then\par
+begin\par
+    //******************************************\par
+    // IMPORTANT FOR REALTIME IMPLEMENTATIONS **\par
+    //******************************************\par
+    // Be sure to set ManualScaleControl,\par
+    //   ManualMaxY, and ManualMinY\par
+    // Be sure to set ManualMaxDataString\par
+    // Be sure to set ManualMaxPointLabel\par
+    // Be sure to set NoStackedData to TRUE\par
+    // Be sure to set NoRandomPointsToGraph to TRUE\par
+    // Be sure to set AllowHistogram to FALSE\par
+    // Be sure to use PEP_szaAPPENDPOINTLABELDATA\par
+    //   before PEP_faAPPENDYDATA\par
+    //*****************************************//\par
+    //*****************************************//\par
+\par
+    //** new point label **\par
+    CurrentTime := TimeToStr(Time);\par
+    StringToWideChar(CurrentTime, szCurrentTime, 30);\par
+\par
+    //** new YData **\par
+    //NewData: array[0..1] Of Single;// //add to Var section\par
+    NewData[0] := (Random * 20) + 2;\par
+    NewData[1] := (Random * 40) + 60;\par
+\par
+    //** transfer new point label **\par
+    PEvsetW(Pego1.hObject, PEP_szaAPPENDPOINTLABELDATA, @szCurrentTime, 1);\par
+\par
+    //** transfer new YData **\par
+    //** this will also update and view new image **\par
+    PEvsetW(Pego1.hObject, PEP_faAPPENDYDATA, @NewData[0], 1);\par
+end\par
+else If nChart = 20 Then\par
+begin\par
+   // Graph Real Time Feed using PEpartialresetimage //\par
+   if (m_nRealTimeCounter >= 15000) then\par
+   begin\par
+\par
+       // When we reach the end of our data, we shift 20% to the\par
+       // left and make room for another 3000 quick updates.\par
+       PEvsetW(Pego1.hObject, PEP_szaAPPENDPOINTLABELDATA, Nil, 3000);\par
+       PEvsetW(Pego1.hObject, PEP_faAPPENDYDATA, Nil, 3000);\par
+\par
+       // We need to perform a complete image update here.\par
+       Pego1.PEactions := gResetImage;\par
+       Pego1.PEactions := gInvalidateImage;\par
+       Pego1.Update;\par
+       m_nRealTimeCounter := 12000;\par
+   end;\par
+\par
+   // First Subset //\par
+   Pego1.YData[0, m_nRealTimeCounter] := (sin(0.003 *  m_nSinCounter) * 500.0);\par
+\par
+   // Second Subset //\par
+   Pego1.YData[1, m_nRealTimeCounter] := (cos(0.003 *  m_nSinCounter) * 500.0);\par
+\par
+   // Set an example string associated with data //\par
+   Pego1.PointLabels[m_nRealTimeCounter] :=  'Test ' + Format('%d',[m_nSinCounter]);\par
+\par
+   // This call performs a quick partial draw to an internal cached bmp.\par
+   PEpartialresetimage(Pego1.hObject, m_nRealTimeCounter, 1);\par
+\par
+   // Invalidate control, only invalidate vertical charting area and\par
+   // approximate horizontal location of new data added.\par
+\par
+   nA := 0;     // Initialize axis, non-zero only if using MultiAxesSubsets\par
+   fX := m_nRealTimeCounter - 5.0;   // Approximate horizontal location\par
+   fY := 0;     // not important, we will user vertical extents from PEP_rectGRAPH\par
+\par
+   // This call finds pixel location for fX and fY graph coordinates.\par
+   PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 1);\par
+\par
+   PEvgetW(Pego1.hObject, PEP_rectGRAPH, @r); // get vertical extents of charting area.\par
+   r.left := nX;\par
+   r.right := nX + 50; // 50 pixels close to new data location\par
+\par
+   // For comparison purposes, you can uncomment the line below //\par
+   // Calling PEresetimage with each timer event causes CPU usage to go to 100%\par
+   // PEpartialresetimage allows the same visual output while using 2% or less of the CPU\par
+   // Pego1.Peactions := epeactions(0);\par
+\par
+   InvalidateRect(Pego1.HANDLE, @r, FALSE);\par
+\par
+   m_nRealTimeCounter := m_nRealTimeCounter + 1;\par
+   m_nSinCounter := m_nSinCounter + 1;\par
+\par
+end;\par
+end;\par
+////////////////////////////\par
+procedure TForm2.pego1MouseMove(Sender: TObject; Shift: TShiftState; X,\par
+  Y: Integer);\par
+\par
+Var\par
+    nChart : Integer;\par
+    s : WideString;\par
+    s2 : WideString;\par
+    nA : Longint;\par
+    nX : Longint;\par
+    nY : Longint;\par
+    fX : Double;\par
+    fY : Double;\par
+    pt : TPOINT;\par
+    r : TRect;\par
+    hsd : THotSpotData;\par
+    Subset1Y: Single;\par
+    Subset2Y: Single;\par
+    Subset3Y: Single;\par
+    Subset4Y: Single;\par
+    slope: Single;\par
+    y0: Single;\par
+    y1: single;\par
+    y2: Single;\par
+    x1: single;\par
+    x2: single;\par
+    szDate: string;\par
+    szF: string;\par
+    fHigh: Single;\par
+    fLow: Single;\par
+    fOpen: Single;\par
+    fClose: Single;\par
+    fVolume: Single;\par
+    szPrecision: WideString;\par
+    a: Integer;\par
+    nChangedAxisColor: Integer;\par
+    nResult: Integer;\par
+\par
+Begin\par
+//check to see if a list item has been selected//\par
+if form1.list1.ItemIndex < 0 then exit;\par
+//pull the 3 digit number out of the index and convert it to an integer//\par
+s := form1.list1.items.strings[form1.list1.ItemIndex];\par
+s:=Copy(s,1,3);\par
+nChart := StrToInt(s);\par
+\par
+If nChart = 7 Then\par
+begin\par
+    // get last mouse location within control //\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // test to see if this is within grid area //\par
+    PEvgetW(Pego1.hObject, PEP_rectGRAPH, @r);\par
+    if (pt.x > r.left) And (pt.x < r.right) And (pt.y > r.top) And (pt.y < r.bottom) Then\par
+    begin\par
+        nA := 0;      //Initialize axis, non-zero only if using MultiAxesSubsets//\par
+        nX := pt.x;   //Initialize nX and nY with mouse location//\par
+        nY := pt.y;\par
+        PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+        s := FormatFloat('#.00', fX);\par
+        s2 := FormatFloat('#.00', fY);\par
+        Form2.Caption := s + '   -   ' + s2;\par
+    end\par
+    else\par
+        Form2.Caption := 'Outside Grid';\par
+end\par
+else If nChart = 14 Then\par
+begin\par
+    // get last mouse location within control //\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pego1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pego1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pego1.YData[hsd.w1, hsd.w2]);\par
+        s2 := 'DataPoint value ' + s;\par
+        Form2.Caption := s2;\par
+    end\par
+    else if (hsd.nHotSpotType = PEHS_SUBSET) Then\par
+    begin\par
+        s := 'Subset Legend is ' + Pego1.SubsetLabels[hsd.w1];\par
+        Form2.Caption := s;\par
+    end\par
+    else if (hsd.nHotSpotType = PEHS_POINT) Then\par
+    begin\par
+        s := 'Point Label is ' + Pego1.PointLabels[hsd.w1];\par
+        Form2.Caption := s;\par
+    end\par
+    else\par
+    begin\par
+        PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+        nResult := PEsearchsubsetpointindex(Pego1.hObject, pt.x, pt.y);\par
+        if (nResult <> 0) then\par
+        begin\par
+            s := 'Closest Subset Point s=' + IntToStr(Pego1.ClosestSubset);\par
+            s :=  s + ', p=' + IntToStr(Pego1.ClosestPoint);\par
+            Form2.Caption := s;\par
+        end\par
+        else\par
+            Form2.Caption := 'No Hot Spot';\par
+    end;\par
+\par
+end\par
+else If nChart = 28 Then\par
+begin\par
+\par
+    // get last mouse location within control //\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    nA := 0;      // Initialize axis, non-zero only if using MultiAxesSubsets //\par
+    nX := pt.x;   // Initialize nX and nY with mouse location //\par
+    nY := pt.y;\par
+    PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+\par
+    // We now know data coordinates for mouse location //\par
+\par
+    // Use fX to interpolate each subset to find approximate Y value //\par
+    nX := floor(fX) - 1;  // nX is floor of fX\par
+    x2 := nX + 1;    // x2 is right most point index\par
+    x1 := nX;        // x1 is left most point index or nX\par
+\par
+   if (fX < 1) or (fX > 12) Then\par
+   begin\par
+        Pego1.WorkingTable := 0;\par
+        Pego1.TAText[0,2] := '        ';\par
+        Pego1.TAText[0,5] := '        ';\par
+        Pego1.WorkingTable := 1;\par
+        Pego1.TAText[0,2] := '        ';\par
+        Pego1.TAText[0,2] := '        ';\par
+        PEdrawtable(Pego1.hObject , 0, 0);\par
+        PEdrawtable(Pego1.hObject , 1, 0);\par
+        exit;\par
+   end;\par
+\par
+   fX := fX - 1.0;\par
+\par
+   // 1st subset //\par
+   y2 := Pego1.YData[0, nX+1];\par
+   y1 := Pego1.YData[0, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset1Y := (slope * fX) + y0;\par
+\par
+   // 2nd subset //\par
+   y2 := Pego1.YData[1, nX+1];\par
+   y1 := Pego1.YData[1, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset2Y := (slope * fX) + y0;\par
+\par
+   // 3rd subset //\par
+   y2 := Pego1.YData[2, nX+1];\par
+   y1 := Pego1.YData[2, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset3Y := (slope * fX) + y0;\par
+\par
+   // 4th subset //\par
+   y2 := Pego1.YData[3, nX+1];\par
+   y1 := Pego1.YData[3, nX];\par
+   slope := (y2 - y1)/(x2 -x1);\par
+   y0 := y1 - (slope * x1);\par
+   Subset4Y := (slope * fX) + y0;\par
+\par
+   // Place text in table annotation //\par
+   Pego1.WorkingTable := 0;\par
+   PEgo1.TAText[0,2] := Format('%.2f', [Subset1Y]);\par
+   PEgo1.TAText[0,5] := Format('%.2f', [Subset2Y]);\par
+\par
+   Pego1.WorkingTable := 1;\par
+   PEgo1.TAText[0,2] := Format('%.2f', [Subset3Y]);\par
+   PEgo1.TAText[0,5] := Format('%.2f', [Subset4Y]);\par
+\par
+   PEdrawtable(Pego1.hObject, 0, 0);\par
+   PEdrawtable(Pego1.hObject, 1, 0);\par
+\par
+end\par
+else If nChart = 30 Then\par
+begin\par
+       // get last mouse location within control //\par
+       PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+       nA := 0;      //Initialize axis, non-zero only if using MultiAxesSubsets\par
+       nX := pt.x;   //Initialize nX and nY with mouse location\par
+       nY := pt.y;\par
+       PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+\par
+       // We now know data coordinates for mouse location //\par
+\par
+       // Code to pick closest point index //\par
+       nX := Trunc(fX + 0.5);\par
+       nX := nX - 1;\par
+\par
+       if (nX < 0) or (nX > 731) Then  // 731 points per subset in data file\par
+       begin\par
+            Pego1.TAText[11, 0] := '        ';\par
+            Pego1.TAText[12, 0] := '        ';\par
+            Pego1.TAText[13, 0] := '        ';\par
+            Pego1.TAText[14, 0] := '        ';\par
+            Pego1.TAText[15, 0] := '        ';\par
+            Pego1.TAText[16, 0] := '        ';\par
+            PEdrawtable(Pego1.hObject, 0, 0);\par
+            Exit;\par
+       end;\par
+\par
+       fX := fX - 1.0;\par
+\par
+       // Get Data at closest point //\par
+\par
+       fHigh := Pego1.YData[0, nX];\par
+       fLow := Pego1.YData[1, nX];\par
+       fOpen := Pego1.YData[2, nX];\par
+       fClose := Pego1.YData[3, nX];\par
+       fVolume := Pego1.YData[7, nX];\par
+       szDate := Pego1.PointLabels[nX];\par
+\par
+       // Place text in table annotation //\par
+       // Get numeric precision //\par
+       szPrecision := IntToStr(Integer(Pego1.DataPrecision));\par
+\par
+       // Place text in table annotation //\par
+       Pego1.WorkingTable := 0;\par
+       Pego1.TAText[11,0] := szDate;\par
+\par
+       szF := 'H:%.' + szPrecision + 'f';\par
+       Pego1.TAText[12, 0] := Format(szF, [fHigh]);\par
+       szF := 'L:%.' + szPrecision + 'f';\par
+       Pego1.TAText[13, 0] := Format(szF, [fLow]);\par
+       szF := 'O:%.' + szPrecision + 'f';\par
+       Pego1.TAText[14, 0] := Format(szF, [fOpen]);\par
+       szF := 'C:%.' + szPrecision + 'f';\par
+       Pego1.TAText[15, 0] := Format(szF, [fClose]);\par
+       Pego1.TAText[16, 0] := Format('V:%.0f', [fVolume]);\par
+\par
+       PEdrawtable(Pego1.hObject, 0, 0);\par
+\par
+\par
+end\par
+else If nChart = 32 Then\par
+begin\par
+\par
+    If Pego1.ProcessingMouseMove = True Then Exit;\par
+\par
+    // If mouse is inside an axis, change it's back color to WHITE //\par
+    // Determine if mouse is within an axis //\par
+    nChangedAxisColor := -1;\par
+\par
+    // get last mouse location within control //'\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    For a := 0 To 15 do\par
+    begin\par
+        // test to see if this is within axis area //'\par
+        Pego1.WorkingAxis := a;\par
+        PEvgetW(Pego1.hObject, PEP_rectAXIS, @r);\par
+\par
+        If( pt.X > r.Left) And (pt.X < r.Right) And (pt.Y > r.Top) And (pt.Y < r.Bottom) Then\par
+        begin\par
+            If Pego1.AxisBackColor <> Pego1.PEargb(255, 255, 255, 255) Then\par
+            begin\par
+                Pego1.AxisBackColor := Pego1.PEargb(255, 255, 255, 255);\par
+                Pego1.AxisForeColor := Pego1.PEargb(255, 255, 0, 0);\par
+                nChangedAxisColor := a;\par
+                break;\par
+            end;\par
+        end;\par
+    end;\par
+\par
+    If (nChangedAxisColor <> -1) Then\par
+    begin\par
+        For a := 0 To 15 do\par
+        begin\par
+            If (a <> nChangedAxisColor) Then\par
+            begin\par
+                Pego1.WorkingAxis := a;\par
+                Pego1.AxisBackColor := 1;\par
+                Pego1.AxisForeColor := 1;\par
+            end;\par
+        end;\par
+        Pego1.PEactions := gResetImage;\par
+        Pego1.PEactions := gInvalidateImage;\par
+    end;\par
+\par
+end\par
+else\par
+    Form2.Caption := '';\par
+\par
+end;\par
+\par
+procedure TForm2.FormShow(Sender: TObject);\par
+begin\par
+Form2.left := 0;\par
+Form2.top := Trunc(Screen.Height/3);\par
+\par
+if (Screen.Width > 1920) then\par
+  Form2.Width := 1920\par
+else\par
+  Form2.Width := Screen.Width;\par
+\par
+Form2.Height := Trunc(Screen.Height * 1.9 / 3);\par
+end;\par
+\par
+procedure TForm2.Pego1TableAnnotation(Sender: TObject; DblClick, nIndex,\par
+  nRow, nColumn: Integer);\par
+Var\par
+    nChart : Integer;\par
+    s : WideString;\par
+    i : LongInt;\par
+    szSym : WideString;\par
+    hsd : THotSpotData;\par
+    pt: TPoint;\par
+    nType: Integer;\par
+\par
+begin\par
+//check to see if a list item has been selected//\par
+if form1.list1.ItemIndex < 0 then exit;\par
+//pull the 3 digit number out of the index and convert it to an integer//\par
+s := form1.list1.items.strings[form1.list1.ItemIndex];\par
+s:=Copy(s,1,3);\par
+nChart := StrToInt(s);\par
+\par
+If nChart = 30 Then\par
+begin\par
+    If (nIndex = 0) Then  // zero represents first table annotation\par
+    begin\par
+        Pego1.ZoomMode := False;\par
+        Pego1.PointsToGraph := 0;  // plot all points\par
+\par
+        // Change color of selected table item //\par
+        For i := 0 To 9 Do\par
+            Pego1.TAColor[i, 0] := Pego1.PEargb(255, 142, 142, 142);\par
+        Pego1.TAColor[nRow, nColumn] := Pego1.PEargb(255, 198, 0, 0);\par
+\par
+        szSym := TrimLeft(Pego1.TAText[nRow, nColumn]);\par
+\par
+        // OK, Change Data //\par
+        LoadData(szSym);\par
+\par
+        PEreinitialize(Pego1.hObject);\par
+        PEresetimage(Pego1.hObject, 0, 0);\par
+        InvalidateRect(Pego1.HANDLE, Nil, False);\par
+    end;\par
+end\par
+else if nChart = 34 then\par
+begin\par
+    // Look for table hot spot and change which subsets are visible //\par
+    // hsd : THotSpotData  // Add to Var section\par
+\par
+    // get last mouse location within control //\par
+    PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pego1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pego1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    If (hsd.nHotSpotType = PEHS_TABLEANNOTATION + 0) Then // zero represents first table annotation\par
+    begin\par
+        // If TYPE is SQUARESOLID, change to SQUARE and vice versa. //\par
+        nType := Pego1.TAType[hsd.w1, hsd.w2];\par
+\par
+        If (nType = PEGAT_LARGESQUARE) Then\par
+        begin\par
+            Pego1.TAType[hsd.w1, hsd.w2] := PEGAT_LARGESQUARESOLID;\par
+            Pego1.SubsetsToShow[hsd.w1-1] := 2;   // 2 is just an arbitrary weight\par
+        end\par
+        Else\par
+        begin\par
+            Pego1.TAType[hsd.w1, hsd.w2] := PEGAT_LARGESQUARE;\par
+            Pego1.SubsetsToShow[hsd.w1-1] := 0;   // 0 hides subset\par
+        end;\par
+\par
+        Pego1.PEactions := gReinitAndReset;\par
+    end;\par
+\par
+end;\par
+\par
+end;\par
+\par
+procedure TForm2.Pego1DataHotSpot(Sender: TObject; DblClick, SubsetIndex,\par
+  PointIndex: Integer);\par
+begin\par
+\par
+    // Example 030 is only example with data hot spots //\par
+    Pego1.CursorMode := gVertLine;   // Enable Vertical Cursor Mode.\par
+    Pego1.CursorPoint := PointIndex;  // Set Cursor's focus selected point.\par
+\par
+end;\par
+\par
+procedure TForm2.Pego1CursorMoved(Sender: TObject);\par
+Var\par
+    nX: LongInt;\par
+    fHigh: Single;\par
+    fLow: Single;\par
+    fOpen: Single;\par
+    fClose: Single;\par
+    fVolume: Single;\par
+    szDate: string;\par
+    szF: string;\par
+    szPrecision: string;\par
+\par
+begin\par
+    nX := Pego1.CursorPoint;\par
+\par
+    // Get Data at closest point //\par
+    fHigh := Pego1.YData[0, nX];\par
+    fLow := Pego1.YData[1, nX];\par
+    fOpen := Pego1.YData[2, nX];\par
+    fClose := Pego1.YData[3, nX];\par
+    fVolume := Pego1.YData[7, nX];\par
+    szDate := Pego1.PointLabels[nX];\par
+\par
+    // Place text in table annotation //\par
+    // Get numeric precision //\par
+    szPrecision := IntToStr(Integer(Pego1.DataPrecision));\par
+\par
+    // Place text in table annotation //\par
+    Pego1.WorkingTable := 0;\par
+    Pego1.TAText[11,0] := szDate;\par
+\par
+    szF := 'H:%.' + szPrecision + 'f';\par
+    Pego1.TAText[12, 0] := Format(szF, [fHigh]);\par
+    szF := 'L:%.' + szPrecision + 'f';\par
+    Pego1.TAText[13, 0] := Format(szF, [fLow]);\par
+    szF := 'O:%.' + szPrecision + 'f';\par
+    Pego1.TAText[14, 0] := Format(szF, [fOpen]);\par
+    szF := 'C:%.' + szPrecision + 'f';\par
+    Pego1.TAText[15, 0] := Format(szF, [fClose]);\par
+    Pego1.TAText[16, 0] := Format('V:%.0f', [fVolume]);\par
+\par
+    PEdrawtable(Pego1.hObject, 0, 0);\par
+\par
+end;\par
+\par
+procedure TForm2.Pego1CustomTrackingDataText(Sender: TObject);\par
+Var\par
+    fX: Double;\par
+    fY: Double;\par
+    fRY: Double;\par
+    nA: Integer;\par
+    nX: Integer;\par
+    nY: Integer;\par
+    pt: TPoint;\par
+    r: TRect;\par
+    s : WideString;\par
+    s2 : WideString;\par
+    sY: Single;\par
+    nChart: Integer;\par
+\par
+    szDate: string;\par
+    fHigh: Single;\par
+    fLow: Single;\par
+    fOpen: Single;\par
+    fClose: Single;\par
+    fVolume: Single;\par
+    szPrecision: WideString;\par
+\par
+begin\par
+    //check to see if a list item has been selected//\par
+    if form1.list1.ItemIndex < 0 then exit;\par
+    //pull the 3 digit number out of the index and convert it to an integer//\par
+    s := form1.list1.items.strings[form1.list1.ItemIndex];\par
+    s:=Copy(s,1,3);\par
+    nChart := StrToInt(s);\par
+\par
+    If nChart = 7 Then\par
+    begin\par
+      if (Pego1.TrackingPromptTrigger = eTrackingPromptTrigger.gMouseMove) then\par
+        // get last mouse location within control //\par
+        PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+        // test to see if this is within grid area //\par
+        PEvgetW(Pego1.hObject, PEP_rectGRAPH, @r);\par
+        if (pt.x > r.left) And (pt.x < r.right) And (pt.y > r.top) And (pt.y < r.bottom) Then\par
+        begin\par
+            nA := 0;      //Initialize axis, non-zero only if using MultiAxesSubsets//\par
+            nX := pt.x;   //Initialize nX and nY with mouse location//\par
+            nY := pt.y;\par
+            PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+            PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fRY, 1, 0, 0);\par
+\par
+            s := FormatFloat('#.00', fY);\par
+            s2 := FormatFloat('#.00', fRY);\par
+            Pego1.TrackingText := 'Left Y <- ' + s + '   ' + s2 + ' -> Right Y'\par
+        end\par
+        else\par
+        begin\par
+            // Not a MouseMove, must be a CursorMove trigger\par
+            sY := Pego1.YData[Pego1.CursorSubset, Pego1.CursorPoint];\par
+\par
+            if (Pego1.CursorSubset < 3) then\par
+            begin\par
+                Pego1.TrackingText := 'Left Y <- ' + FormatFloat('#.00', sY);\par
+            end\par
+            else\par
+            begin\par
+                Pego1.TrackingText := FormatFloat('#.00', sY) + ' -> Right Y';\par
+            end;\par
+        end;\par
+    end\par
+    else if nChart = 30 Then\par
+    begin\par
+\par
+       if (Pego1.TrackingPromptTrigger <> eTrackingPromptTrigger.gMouseMove) then\par
+       begin\par
+           // Trigger not mouse, must be a cursormove event, get cursor location...\par
+           nX := Pego1.CursorPoint;\par
+       end\par
+       else\par
+       begin\par
+           // get last mouse location within control //\par
+           PEvgetW(Pego1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+           nA := 0;      //Initialize axis, non-zero only if using MultiAxesSubsets\par
+           nX := pt.x;   //Initialize nX and nY with mouse location\par
+           nY := pt.y;\par
+           PEconvpixeltograph(Pego1.hObject, @nA, @nX, @nY, @fX, @fY, 0, 0, 0);\par
+\par
+           // We now know data coordinates for mouse location //\par
+\par
+           // Code to pick closest point index //\par
+           nX := Trunc(fX + 0.5);\par
+           nX := nX - 1;\par
+\par
+           if (nX < 0) or (nX > 731) Then  // 731 points per subset in data file\par
+           begin\par
+                Pego1.TAText[11, 0] := '        ';\par
+                Pego1.TAText[12, 0] := '        ';\par
+                Pego1.TAText[13, 0] := '        ';\par
+                Pego1.TAText[14, 0] := '        ';\par
+                Pego1.TAText[15, 0] := '        ';\par
+                Pego1.TAText[16, 0] := '        ';\par
+                PEdrawtable(Pego1.hObject, 0, 0);\par
+                Exit;\par
+           end;\par
+       end;\par
+\par
+       // Get Data at closest point //\par
+\par
+       fHigh := Pego1.YData[0, nX];\par
+       fLow := Pego1.YData[1, nX];\par
+       fOpen := Pego1.YData[2, nX];\par
+       fClose := Pego1.YData[3, nX];\par
+       fVolume := Pego1.YData[7, nX];\par
+       szDate := Pego1.PointLabels[nX];\par
+\par
+       // Place text in table annotation //\par
+       // Get numeric precision //\par
+       szPrecision := IntToStr(Integer(Pego1.DataPrecision));\par
+\par
+       s := szDate;\par
+       s := s + '     ' + chr(10);\par
+       s := s + 'H:' + FormatFloat('#.00', fHigh) + ' ' + chr(10);\par
+       s := s + 'L:' + FormatFloat('#.00', fLow) + ' ' + chr(10);\par
+       s := s + 'O:' + FormatFloat('#.00', fOpen) + ' ' + chr(10);\par
+       s := s + 'C:' + FormatFloat('#.00', fClose) + ' ' + chr(10);\par
+       s := s + 'V:' + FormatFloat('#############', fVolume) ;\par
+       Pego1.TrackingText := s;\par
+\par
+    end;\par
+\par
+end;\par
+\par
+\par
+\par
+end.\par
+\par
+\par
+\par
+\par
+}
+ 

@@ -1,0 +1,66 @@
+Software License: 
+GigaSoft ProEssentials v9.8 Demo
+
+This Software is owned by and remains the property 
+of Gigasoft, Inc., is protected by United States 
+copyright law and international treaty provisions.
+
+Gigasoft grants the Licensee the limited rights to 
+possess and use this Gigasoft Software for demo 
+purposes. Licensee may use the ProEssentials v8 
+Demo software for as long as needed provided they 
+do not violate the copyright. Licensee agrees that 
+the Software will be used solely for Licensee’s 
+internal purposes. Licensee may not make any 
+changes or modification to the licensed software, 
+and Licensee may not decompile, disassemble, or 
+otherwise reverse engineer the software. Licensee 
+may not distribute, rent or lease it to others.
+
+DISCLAIMER
+LICENSE FOR THE SOFTWARE DOES NOT INCLUDE
+ANY CONSIDERATIONS FOR ASSUMPTION OF RISK 
+BY GIGASOFT, AND GIGASOFT DISCLAIMS ANY AND 
+ALL LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL 
+DAMAGES ARISING OUT OF THE USE OR OPERATION 
+OR INABILITY OT USE THE SOFTWARE,  EVEN IF 
+ANY OF THESE PARTIES HAVE BEEN ADVISED OF THE 
+POSSIBILITY OF SUCH DAMAGES. FURTHERMORE, 
+LICENSEE INDEMNIFIES AND AGREES TO HOLD 
+GIGASOFT HARMLESS FROM SUCH CLAIMS.  THE 
+ENTIRE RISK AS TO THE RESULTS AND PERFORMANCE 
+OF THE SOFTWARE IS ASSUMED BY THE LICENSEE.  
+THE WARRANTIES EXPRESSED IN THIS LICENSE ARE 
+THE ONLY WARRANTIES MADE BY GIGASOFT AND ARE 
+IN LIEU OF ALL OTHER WARRANTIES, EXPRESSED OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED 
+WARRANTIES OF MERCHANTABILITY AND OF FITNESS 
+FOR A PARTICULAR PURPOSE.  THIS WARRANTY GRANTS  
+SPECIFIED LEGAL RIGHTS, AND LICENSEE MAY ALSO 
+HAVE OTHER RIGHTS WHICH VARY FROM JURISDICTION
+TO JURISDICTION.  SOME JURISDICTIONS DO NOT 
+ALLOW THE EXCLUSION OR LIMITATION OF WARRANTIES, 
+SO THE ABOVE LIMITATIONS OR EXCLUSIONS MAY NOT 
+APPLY TO LICENSEE.
+
+U.S. GOVERNMENT RESTRICTED RIGHTS
+The Software and documentation are provided with 
+restricted rights.  Use, duplication, or disclosure by 
+the Government is subject to restrictions as set forth in 
+subparagraph (c) (1) (ii) of the Rights in Technical Data 
+and Computer Software clause at DFARS 252.227-7013 or 
+subparagraph (c) (1) and (2) of the Commercial Computer 
+Software-Restricted Rights at 48 CFR 52.227-19, as 
+applicable.  
+Manufacturer is Gigasoft, Inc. / Keller, TX 76248
+
+This license is the complete and exclusive statement of 
+the parties agreement.  Should any provision of this License 
+be held to be invalid by any court of competent jurisdiction, 
+that provision will be enforced to the maximum extent 
+permissible, and the remainder of the License shall 
+nonetheless remain in full force and effect.  This License 
+shall be controlled by the laws of the State of 
+Texas, and the United States of America.
+
+COPYRIGHT 1994-2021 BY GIGASOFT, INC. ALL RIGHTS RESERVED

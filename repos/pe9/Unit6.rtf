@@ -1,0 +1,4424 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.18362}\viewkind4\uc1 
+\pard\f0\fs22\lang1033\{$FINITEFLOAT OFF\}\par
+unit Unit6;\par
+\par
+interface\par
+\par
+uses\par
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,\par
+  pe3dvcl, Pegrpapi, Math, ExtCtrls, Grids;\par
+\par
+type\par
+  TForm6 = class(TForm)\par
+    Pe3do1: Pe3do;\par
+    Timer1: TTimer;\par
+    Procedure Create3DSimpleWireFrame;\par
+    Procedure CreateLargeSurfaceFlattenedFlyBy;\par
+    Procedure CreateAllCharts;\par
+    procedure FormResize(Sender: TObject);\par
+    procedure FormShow(Sender: TObject);\par
+    procedure Timer1Timer(Sender: TObject);\par
+    procedure Pe3do1MouseMove(Sender: TObject; Shift: TShiftState; X,\par
+      Y: Integer);\par
+    procedure Pe3do1DataHotSpot(Sender: TObject; DblClick, SubsetIndex,\par
+      PointIndex: Integer);\par
+    procedure Pe3do1CustomTrackingDataText(Sender: TObject);\par
+    procedure Pe3do1KeyPress(Sender: TObject; var Key: Char);\par
+    procedure Pe3do1CustomMenu(Sender: TObject; MenuIndex,\par
+      SubmenuIndex: Integer);\par
+    procedure Pe3do1CustomTrackingOtherText(Sender: TObject);\par
+  private\par
+    \{ Private declarations \}\par
+  public\par
+    \{ Public declarations \}\par
+    destructor Destroy; override;\par
+  end;\par
+\par
+  MyXData = array[0..100000] of Single;\par
+  MyYData = array[0..100000] of Single;\par
+  MyZData = array[0..100000] of Single;\par
+\par
+  EDGEx = array[0..399,0..399] of Single;\par
+  EDGEy = array[0..399,0..399] of Single;\par
+  EDGEz = array[0..399,0..399] of Single;\par
+\par
+  Poly = array[0..720000] of POLYGONDATA;\par
+\par
+  EDGE2x = array[0..179,0..179] of Single;\par
+  EDGE2y = array[0..179,0..179] of Single;\par
+  EDGE2z = array[0..179,0..179] of Single;\par
+\par
+  GlobalElevData = array[0..(2250000) ] of LongInt;\par
+\par
+var\par
+  Form6: TForm6;\par
+  pGlobalElevData: ^GlobalElevData;\par
+  m_nRealTimeCounter: Integer;\par
+  m_nOverallCounter : Integer;\par
+  m_nAnnotationStartIndices : Array[0..25] of LongInt;\par
+  m_nCurrentAnnotation : Integer;\par
+  m_nAnimationViewIndex : Integer;\par
+implementation\par
+\par
+uses Unit1, Unit2, Unit3, Unit4, Unit5;\par
+\par
+\{$R *.DFM\}\par
+\par
+\par
+destructor TForm6.Destroy;\par
+ begin\par
+     if pGlobalElevData <> Nil then\par
+     begin\par
+         FreeMem(pGlobalElevData, SizeOf(Single) * 2250000);\par
+         pGlobalElevData := Nil;\par
+     end;\par
+     inherited Destroy;\par
+ end;\par
+\par
+\{/////////////////\}\par
+\{Create all the charts used for this form\}\par
+Procedure TForm6.CreateAllCharts;\par
+\par
+type info = array[0..85] of double;\par
+type info2 = array[0..71] of integer;\par
+type info3 = array[0..287] of integer;\par
+\par
+Var\par
+nChart : Integer;\par
+a : Integer;\par
+b : Integer;\par
+r : Integer;\par
+n : Integer;\par
+m : Integer;\par
+q : Integer;\par
+tt : Integer;\par
+ph  : Integer;\par
+phi : Single;\par
+theta : Single;\par
+factor_theta : Single;\par
+factor_phi : Single;\par
+radius : Single;\par
+\par
+pEDGEx: ^EDGEx;\par
+pEDGEy: ^EDGEy;\par
+pEDGEz: ^EDGEz;\par
+pPoly: ^Poly;\par
+//EDGEx : Array[0..1200,0..1200] of Single;\par
+//EDGEy : Array[0..1200,0..1200] of Single;\par
+//EDGEz : Array[0..1200,0..1200] of Single;\par
+//Poly : Array[0..720000] of POLYGONDATA;\par
+\par
+t : String;\par
+p : Integer;\par
+i : Integer;\par
+c : Longword;\par
+//ptx: ^MyXData;\par
+//pty: ^MyYData;\par
+//ptz: ^MyZData;\par
+\par
+Row: LongInt;\par
+Col: LongInt;\par
+o: LongInt;\par
+s: LongInt;\par
+nQ: LongInt;\par
+nStartRow: LongInt;\par
+nEndRow: LongInt;\par
+nStartCol: LongInt;\par
+nEndCol: LongInt;\par
+nTargetRows: LongInt;\par
+nTargetCols: LongInt;\par
+pElevData: ^ElevData;\par
+pMyXData: ^MyXDat;\par
+pMyYData: ^MyYDat;\par
+pMyZData: ^MyZDat;\par
+pfile : file;\par
+rowcounter: LongInt;\par
+colcounter: LongInt;\par
+foundtargetindex: Boolean;\par
+nRndRow: Integer;\par
+nRndCol: Integer;\par
+Light0: Point3D;\par
+nX: Integer;\par
+nY: Integer;\par
+radius2: Single;\par
+fInc: Single;\par
+di: Double;\par
+dm: Double;\par
+ftmp: Single;\par
+aCnt: LongInt;\par
+annot: LongInt;\par
+x: Single;\par
+y: Single;\par
+z: Single;\par
+p3d: Point3D;\par
+centerx: Single;\par
+centerz: Single;\par
+starty: Single;\par
+sl : TStringList;\par
+slRow : TStringList;\par
+line : Integer;\par
+StringGrid1: TStringGrid;\par
+nWellCount: Integer;\par
+bFindFirst: Boolean;\par
+\par
+Begin\par
+\par
+form6.Timer1.Enabled := False;\par
+form6.Timer1.Interval := 500;\par
+\par
+\{check to see if a list item has been selected\}\par
+if form1.list1.ItemIndex < 0 then exit;\par
+\par
+\{pull the 3 digit number out of the index and convert it to an integer\}\par
+t := form1.list1.items.strings[form1.list1.ItemIndex];\par
+t := Copy(t,1,3);\par
+nChart := StrToInt(t);\par
+\par
+PEreset(Pe3do1.hObject);\par
+\par
+Pe3do1.PrepareImages := True;\par
+Pe3do1.FocalRect := False;\par
+\par
+If nChart = 400 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{400  *** 3D Simple Wire Frame ***\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Code to get partial data from a binary file //\par
+\par
+    PEreset(Pe3do1.hObject); // always start a 3D new initialization with a call to Reset\par
+    Pe3do1.ModelessAutoClose := true;  // demo never destroys the chart object\par
+\par
+    nStartRow := 110;\par
+    nEndRow := 158;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+    nStartCol := 210;\par
+    nEndCol := 258;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * (2250000) );\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], (2250000) );\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nQ);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyXData[o] := Col + 1;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                    pMyZData[o] := Row + 1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nQ);\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+    FreeMem(pMyXData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 3;\par
+    Pe3do1.MouseWheelZoomSmoothness := 3;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Set view\par
+    Pe3do1.ViewingHeight := 16;\par
+    Pe3do1.DegreeOfRotation := 196;\par
+\par
+    // CursorPromptTracking //\par
+    Pe3do1.CursorPromptStyle := tdYValue;\par
+    Pe3do1.CursorPromptTracking := True;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 225, 0, 0);\par
+    Pe3do1.AllowDataHotSpots := False;\par
+\par
+    // Set light location\par
+    Light0.X := -2.2; Light0.Y := -7.3;  Light0.Z := 8.3;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := -1.2;\par
+    Pe3do1.DxFitControlShape := false;\par
+    Pe3do1.GridAspectX := 2.0;\par
+    Pe3do1.GridAspectZ := 2.0;\par
+    Pe3do1.DxViewportY := 0.7;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 225, 225, 225);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 159, 159, 159);\par
+    // Alternately, if the above SubsetColor indices are not assigned.\par
+    // (0) will be wireframe color for wireframe plotting method //\par
+    // (0) will be solid color if plotting method is solid\par
+    // (1) will be wire frame color for solid plotting methods\par
+\par
+    // v9 feature\par
+    Pe3do1.ContourColorSet := eContourColorSet.tdCC_BlueCyanGreenYellowBrownWhite;\par
+    Pe3do1.LegendLocation := eLegendLocation.tdLegendLeft;\par
+    Pe3do1.ContourStyleLegend := true;\par
+    Pe3do1.ContourLegendPrecision := 1;\par
+    Pe3do1.ShowWireFrame := true;\par
+\par
+    // Set the plotting method //\par
+    //! There are different plotting method values for each //\par
+    //! case of PolyMode  //\par
+    Pe3do1.PlottingMethod := ePlottingMethod(0); // wireframe\par
+    Pe3do1.AllowSurfaceContour := True;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle  := eQuickStyle.tdMedInset;\par
+    // Add some padding around chart for prettiness if using inset or shadow borders\par
+    Pe3do1.ImageAdjustLeft := 100;\par
+    Pe3do1.ImageAdjustRight := 100;\par
+    Pe3do1.ImageAdjustTop := 50;\par
+    Pe3do1.ImageAdjustBottom := 50;\par
+\par
+    Pe3do1.FixedFonts := True;\par
+    Pe3do1.FontSize := tdLarge;\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // default export settings //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    // Enable CursorPromptTracking HighlighColor, etc only applicable to Direct3D RenderEngine\par
+    Pe3do1.AllowDataHotSpots := true;\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.DataPrecision := eDataPrecision.tdTwoDecimals;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+\par
+    Pe3do1.ShowContour := eShowContour.tdBottomColors;\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+    for annot := 0 to 9 do\par
+    begin\par
+        nRndRow := Random(nTargetRows);\par
+        nRndCol := Random(nTargetCols);\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LARGEDOTSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,0,255,0);\par
+        m_nAnnotationStartIndices[annot] := aCnt;\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,0,255,0);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := false;\par
+    Pe3do1.AnnotationsInFront := false;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // At end of Direct3D initializations, don't forget\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+  End\par
+Else If nChart = 401 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{401  Surface Flattened Fly By\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 3;\par
+    Pe3do1.MouseWheelZoomSmoothness := 3;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Hide Axes\par
+    Pe3do1.ShowXAxis := tdEmpty;\par
+    Pe3do1.ShowYAxis := tdEmpty;\par
+    Pe3do1.ShowZAxis := tdEmpty;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.ViewingHeight := 23;\par
+    Pe3do1.DegreeOfRotation := 44;\par
+\par
+    // Set light location\par
+    Light0.X := 0.2; Light0.Y := -1.75;  Light0.Z := 2.35;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := -0.37;\par
+\par
+    // Set a chart translation //\par
+    Pe3do1.DxViewportX := -7.8;\par
+    Pe3do1.DxViewportY := 0.8;\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // Reduce the terrain height with respect to surface area\par
+    Pe3do1.GridAspectX := 10;\par
+    Pe3do1.GridAspectZ := 10;\par
+    Pe3do1.DxFitControlShape := false;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // Pass Data //\par
+    nStartRow := 0;\par
+    nEndRow := 1000;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+    nStartCol := 0;\par
+    nEndCol := 1000;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * (2250000) );\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], (2250000) );\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nTargetCols);  // v9.5\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nTargetRows);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    if (Row = nStartRow) then pMyXData[Col - nStartCol] := Col + 1;  // v9.5\par
+                    if (Col = nStartCol) then pMyZData[Row - nStartRow] := Row + 1;\par
+                    // See our help, topic SubsetByPoint to understand the below formula\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nTargetCols);  // v9.5\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nTargetRows);\par
+    Pe3do1.DuplicateDataX := eDuplicateData.tdPointIncrement;\par
+    Pe3do1.DuplicateDataZ := eDuplicateData.tdSubsetIncrement;\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * (2250000));\par
+    FreeMem(pMyXData, SizeOf(Single) * nTargetCols);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nTargetRows);\par
+\par
+    Pe3do1.ContourStyleLegend := True;\par
+    Pe3do1.LegendLocation := tdLegendRight;\par
+    Pe3do1.LegendLocationMenu := tdShowMenu;\par
+    Pe3do1.ContourLegendPrecision := 1;\par
+\par
+    // Set Contour Color regions //\par
+    Pe3do1.SubsetColors[-1] := 0; // clears items\par
+    for s := 0 To 31 do\par
+    begin\par
+        Pe3do1.SubsetColors[s] := Pe3do1.PEargb(255, 0, 31 + (s * 7), 95 + (s * 5));\par
+        Pe3do1.SubsetColors[s + 32] := Pe3do1.PEargb(255, 0, 95 + (s * 5), 0);\par
+    end;\par
+    for s := 0 To 35 do\par
+        Pe3do1.SubsetColors[s + 64] := Pe3do1.PEargb(255, 128 + (s * 3), 128 + (s * 3), 128 + (s * 3));\par
+\par
+    // For when ViewingStyle is monochrome //\par
+    for s := 0 To 99 do\par
+        Pe3do1.SubsetShades[s] := Pe3do1.PEargb(255, 50 + (s * 2), 50 + (s * 2), 50 + (s * 2));\par
+\par
+    Pe3do1.ShowLegend := True;\par
+    Pe3do1.LegendLocationMenu := tdShowMenu;\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 80, 80, 80);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 148, 148, 148);\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkLine;\par
+    Pe3do1.BorderTypes := tdNoBorder;\par
+\par
+    Pe3do1.FixedFonts := True;\par
+    Pe3do1.FontSize := tdLarge;\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.ShowBoundingBox := tdNever;\par
+    Pe3do1.ShadingStyle := tdWhiteShading;\par
+    Pe3do1.RotationDetail := tdFullDetail;\par
+\par
+    Pe3do1.ImageAdjustLeft := 0;\par
+    Pe3do1.ImageAdjustRight := 0;\par
+    Pe3do1.ImageAdjustBottom := 0;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    Pe3do1.PlottingMethod := td4;\par
+    Pe3do1.AllowWireFrame := False;\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+    Pe3do1.AllowDataHotSpots := false;\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ContourMenu := eMenuControl.tdHideMenu;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+    for annot := 0 to 19 do\par
+    begin\par
+        nRndRow := Random(nTargetRows);\par
+        nRndCol := Random(nTargetCols);\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LARGEDOTSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,0,0);\par
+        m_nAnnotationStartIndices[annot] := aCnt;\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := false;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // At end of Direct3D initializations, don't forget\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+    Pe3do1.PEactions := tdReinitAndReset;\par
+\par
+    Pe3do1.AutoRotation := True;\par
+\par
+\par
+  End\par
+Else If nChart = 402 Then\par
+  Begin\par
+\{*********************************************************************\par
+*********************************************************************\{\par
+\{402  3D Surface with contoured surface\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 4;\par
+    Pe3do1.MouseWheelZoomSmoothness := 4;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Do not auto fit to shape of window //\par
+    Pe3do1.DxFitControlShape := false;\par
+\par
+    // When data is not square use GridAspectX or Z\par
+    Pe3do1.GridAspectX := 1.5;\par
+    Pe3do1.GridAspectZ := 1.0;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := -0.75;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.ViewingHeight := 26;\par
+    Pe3do1.DegreeOfRotation := 232;\par
+\par
+    // Set light location\par
+    Light0.X := 2.5; Light0.Y := -1.5;  Light0.Z := 0.25;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    Pe3do1.PlottingMethod := td4;\par
+\par
+    // Pass Data //\par
+    Pe3do1.XAxisScaleControl := PEAC_LOG;\par
+    Pe3do1.XAxisLabel := 'X in Log';\par
+    Pe3do1.GridBandsPatching := false;  // log scales maybe best if not patched\par
+\par
+    nStartRow := 100;\par
+    nEndRow := 250;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+    nStartCol := 200;\par
+    nEndCol := 250;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * (2250000) );\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], (2250000) );\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nQ);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyXData[o] := (Col + 1) * (Col - nStartCol + 1);\par
+                    ftmp := pElevData[(Row * 1500) + Col];\par
+                    if (ftmp < 14100.0) then ftmp := 10000.0;  // create a plateau\par
+                    if (ftmp > 16000.0) then ftmp := 17000.0;  // create a plateau\par
+                    pMyYData[o] := ftmp * 0.1;\par
+                    pMyZData[o] := Row + 1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nQ);\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+    FreeMem(pMyXData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    Pe3do1.NullDataValueY := 0.0;\par
+\par
+    Pe3do1.ContourStyleLegend := True;\par
+    Pe3do1.ContourLegendPrecision  := 1;\par
+    Pe3do1.LegendLocation := tdLegendLeft;\par
+    Pe3do1.LegendLocationMenu := tdShowMenu;\par
+    Pe3do1.ShowLegend := True;\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 198, 0, 0);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 0, 148, 0);\par
+\par
+    // v9 features\par
+    Pe3do1.ContourColorProportions[0] := 0.1;\par
+    Pe3do1.ContourColorProportions[1] := 0.05;\par
+    Pe3do1.ContourColorProportions[2] := 0.1;\par
+    Pe3do1.ContourColorProportions[3] := 0.63;\par
+    Pe3do1.ContourColorProportions[4] := 0.06;\par
+    Pe3do1.ContourColorProportions[5] := 0.06;\par
+\par
+    Pe3do1.ContourColorBlends := 0;  // this must be set before COLORSET, COLORSET ALWAYS LAST\par
+    Pe3do1.ContourColorSet := eContourColorSet.tdCC_BlueCyanGreenYellowBrownWhite;\par
+\par
+    Pe3do1.ShowContour := eShowContour.tdBottomLines;\par
+    Pe3do1.ShowWireFrame := true;\par
+    Pe3do1.BarBorderColor := Pe3do1.PEargb(85, 0, 0, 0);\par
+\par
+    Pe3do1.AutoMinMaxPadding := 0;\par
+    Pe3do1.SurfaceNullDataGaps := true;\par
+\par
+    // For when ViewingStyle is monochrome //\par
+    for s := 0 To 59 do\par
+        Pe3do1.SubsetShades[s] := Pe3do1.PEargb(255, 60 + (s * 3), 60 + (s * 3), 60 + (s * 3));\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.RenderEngine := eRenderEngine.tdDirect3D;\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdLightNoBorder;\par
+\par
+    // Set various other properties //\par
+    Pe3do1.FixedFonts := True;\par
+    Pe3do1.FontSize := tdLarge;\par
+    Pe3do1.FontSizeGlobalCntl := 1.1;\par
+\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    // Add Some Padding around image //\par
+    Pe3do1.ImageAdjustLeft := 100;\par
+    Pe3do1.ImageAdjustRight := 100;\par
+    Pe3do1.ImageAdjustBottom := 100;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    Pe3do1.DataPrecision := eDataPrecision.tdTwoDecimals;\par
+\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.TrackingCustomDataText := true;\par
+    Pe3do1.CursorPromptLocation := eCursorPromptLocation.tdText;\par
+\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+    Pe3do1.AllowDataHotSpots := true;\par
+\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+    for annot := 0 to 9 do\par
+    begin\par
+        nRndRow := Random(nTargetRows);\par
+        nRndCol := Random(nTargetCols);\par
+        ftmp := Pe3do1.XData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationX[aCnt] := ftmp;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LARGEDOTSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,0,255,0);\par
+        m_nAnnotationStartIndices[annot] := aCnt;\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := ftmp;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,0,255,0);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 80;\par
+    Pe3do1.AllowGraphAnnotHotSpots := false;\par
+    Pe3do1.AnnotationsInFront := false;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // At end of Direct3D initializations, don't forget\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+    \{   ////////////////////////////////////////\par
+        // Pe3do1CustomTrackingDataText //\par
+        //////////////////////////////////\par
+        dY := Pe3do1.CursorValueY;\par
+        Pe3do1.TrackingText := 'Surface with Plateaus: ' + Chr(10) + FormatFloat('#.00', dY);\par
+\par
+\par
+        ///////////////////////////\par
+        // Pe3do1DataHotSpot //\par
+        ///////////////////////\par
+        // get last mouse location within control //\par
+        PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+        // Call PEgethotspot //\par
+        PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+        // Now look at HotSpotData structure //\par
+        PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+        if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+        begin\par
+            s := FormatFloat('#.00', Pe3do1.CursorValueY );\par
+            s2 := 'Value under mouse ' + s;\par
+            s := FormatFloat('#.', hsd.w1 );\par
+            s2 := s2 + ' Subset ' + s;\par
+            s := FormatFloat('#.', hsd.w2 );\par
+            s2 := s2 + ' Point ' + s;\par
+            Form6.Caption := s2;\par
+        end\par
+    \}\par
+\par
+\par
+  End\par
+Else If nChart = 403 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{403  3D Surface with custom polygon colors\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // This example builds upon the basic Create3DSimpleWireframe '400' example chart //\par
+    Create3DSimpleWireFrame;\par
+\par
+    // Determine data range, as data is random  // v9.5\par
+    PEreinitialize(Pe3do1.hObject);\par
+    centerx := (Pe3do1.ManualMaxX + Pe3do1.ManualMinX) / 2.0;\par
+    centerz := (Pe3do1.ManualMaxZ + Pe3do1.ManualMinZ) / 2.0;\par
+    starty := Pe3do1.YData[99, 99];  // store the random y location for center of chart\par
+\par
+    // Set PlottingMethod //\par
+    Pe3do1.PlottingMethod := ePlottingMethod(2);  //surface with shading\par
+    Pe3do1.ShowWireframe := True;\par
+\par
+    for s := 0 To 199 Do\par
+    begin\par
+        for p := 0 To 199 Do\par
+            Pe3do1.PointColors[s, p] := Pe3do1.PEargb(102,178,178,0)\par
+    end;\par
+\par
+    // Make a simple target graphic by\par
+    // drawing larger and larger circle regions\par
+    c := Pe3do1.PEargb(0, 0, 0, 0);\par
+    For s := 0 To 10 do\par
+    begin\par
+        For p := 0 To 359 do\par
+        begin\par
+            nX := Round(100.0 + Cos(p) * s);\par
+            nY := Round(100.0 + Sin(p) * s);\par
+            Pe3do1.PointColors[nX, nY] := c;\par
+\par
+            // Make a null data area\par
+            Pe3do1.YData[nx, ny] := 80.0;\par
+        end;\par
+    end;\par
+    c := Pe3do1.PEargb(255, 198, 198, 198);\par
+    For s := 11 To 20 do\par
+    begin\par
+        For p := 0 To 359 do\par
+        begin\par
+            nX := Round(100 + Cos(p) * s);\par
+            nY := Round(100 + Sin(p) * s);\par
+            Pe3do1.PointColors[nX, nY] := c;\par
+        end;\par
+    end;\par
+    c := Pe3do1.PEargb(255, 178, 0, 0);\par
+    For s := 21 To 30 do\par
+    begin\par
+        For p := 0 To 359 do\par
+        begin\par
+            nX := Round(100 + Cos(p) * s);\par
+            nY := Round(100 + Sin(p) * s);\par
+            Pe3do1.PointColors[nX, nY] := c;\par
+        end;\par
+    end;\par
+    c := Pe3do1.PEargb(255, 148, 148, 148);\par
+    For s := 31 To 50 do\par
+    begin\par
+        For p := 0 To 359 do\par
+        begin\par
+            nX := Round(100 + Cos(p) * s);\par
+            nY := Round(100 + Sin(p) * s);\par
+            Pe3do1.PointColors[nX, nY] := c;\par
+        end;\par
+    end;\par
+\par
+    // v9 features\par
+    Pe3do1.ContourColorBlends := 40; // this must be set before COLORSET, COLORSET ALWAYS LAST\par
+    Pe3do1.ContourColorSet := eContourColorSet.tdCC_BlueCyanGreenYellowBrownWhite;\par
+    Pe3do1.ShowContour := eShowContour.tdBottomLines;\par
+    Pe3do1.ContourLegendPrecision := 3;\par
+\par
+    Pe3do1.ViewingHeight  := 35;\par
+    Pe3do1.DegreeOfRotation := 135;\par
+\par
+    // Enable smoother rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 3;\par
+    Pe3do1.MouseWheelZoomSmoothness := 3;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    Pe3do1.SurfaceNullDataGaps := true;\par
+    Pe3do1.AllowDataHotSpots := true;\par
+\par
+    Pe3do1.NullDataValueY := 80.0; // v9.5\par
+    Pe3do1.ManualScaleControlY := eManualScaleControl.tdManualMinAndMax; // v9.5\par
+    Pe3do1.ManualMinY := 0;\par
+    Pe3do1.ManualMaxY := 1700;\par
+\par
+    Pe3do1.AllowWireFrame := false;\par
+    Pe3do1.AllowSurfaceContour := true;\par
+    Pe3do1.AllowStylePage := false;\par
+    Pe3do1.ShowLegend := true;\par
+    Pe3do1.LegendLocationMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.BarBorderColor := PE3do1.PEargb(250,90,90,90);\par
+\par
+    Pe3do1.DxFitControlShape  := false;\par
+    Pe3do1.DxZoom := 0.2;\par
+\par
+    nWellCount := 0;\par
+    aCnt := 0;\par
+    bFindFirst := true;\par
+\par
+     //will load the TAB delimited TXT here\par
+     sl := TStringList.Create;\par
+     //will process each TAB delimited line here\par
+     slRow := TStringList.Create;\par
+     slRow.StrictDelimiter := true;\par
+     slRow.Delimiter := #9; //TAB\par
+     StringGrid1 := TStringGrid.Create(Self);\par
+     try\par
+       //load the tab delimited txt file\par
+       sl.LoadFromFile('DirData1.txt') ;\par
+       StringGrid1.RowCount := sl.Count;\par
+\par
+       //for each tab delimited line\par
+       for line := 0 to -1 + sl.Count do\par
+       begin\par
+         //"load" the line into a stringlist\par
+\par
+         if (sl[line].Length < 3) then Continue;\par
+\par
+         slRow.DelimitedText := sl[line];\par
+         StringGrid1.Rows[line].Assign(slRow);\par
+\par
+         if (StringGrid1.Rows[line][0] = 'Y') then\par
+         begin\par
+             bFindFirst := true;\par
+             // Second well, add a text label to last point of previous well as Pointer annotation type //\par
+             if (nWellCount > 0) then\par
+             begin\par
+                 Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.GraphAnnotationX[aCnt - 1];\par
+                 Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.GraphAnnotationZ[aCnt - 1];\par
+                 Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.GraphAnnotationY[aCnt - 1];\par
+                 Pe3do1.GraphAnnotationText[aCnt] := '|lWell ' + IntToStr(nWellCount);\par
+                 Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+                 Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255);\par
+                 m_nAnnotationStartIndices[nWellCount] := aCnt;\par
+                 aCnt := aCnt + 1;\par
+             end;\par
+             nWellCount := nWellCount + 1;\par
+             Continue;\par
+         end;\par
+         y := strtofloat(StringGrid1.Rows[line][0]);\par
+         z := strtofloat(StringGrid1.Rows[line][1]);\par
+         x := strtofloat(StringGrid1.Rows[line][2]);\par
+\par
+         Pe3do1.GraphAnnotationX[aCnt] := (-x / 100) + centerx;\par
+         Pe3do1.GraphAnnotationZ[aCnt] := (-z / 100) + centerz;\par
+         Pe3do1.GraphAnnotationY[aCnt] := starty - (y / 9);\par
+         Pe3do1.GraphAnnotationText[aCnt] := '';\par
+         Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 0, 255, 0);\par
+\par
+         if (Pe3do1.GraphAnnotationY[aCnt] > 250) and (Pe3do1.GraphAnnotationY[aCnt] < 270) then\par
+             Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255)\par
+         else if (Pe3do1.GraphAnnotationY[aCnt] > 500) and (Pe3do1.GraphAnnotationY[aCnt] < 520) then\par
+             Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255)\par
+         else if (Pe3do1.GraphAnnotationY[aCnt] > 750) and (Pe3do1.GraphAnnotationY[aCnt] < 770) then\par
+             Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255)\par
+         else if (Pe3do1.GraphAnnotationY[aCnt] > 1000) and (Pe3do1.GraphAnnotationY[aCnt] < 1020) then\par
+             Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255)\par
+         else if (Pe3do1.GraphAnnotationY[aCnt] > 1250) and (Pe3do1.GraphAnnotationY[aCnt] < 1270) then\par
+             Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255);\par
+\par
+         if (bFindFirst = true) then\par
+         begin\par
+              Pe3do1.GraphAnnotationType[aCnt] := PEGAT_MEDIUMSOLIDLINE;\par
+              bFindFirst := false;\par
+          end\par
+          else\par
+              Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LINECONTINUE;\par
+           aCnt := aCnt + 1;\par
+       end;\par
+     finally\par
+       slRow.Free;\par
+       sl.Free;\par
+       StringGrid1.Free;\par
+     end;\par
+\par
+    // Example of drawing a polygon,\par
+    // or we could use the Rect annotation type as we are simply drawing a square  //\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.GraphAnnotationX[aCnt-1]-2;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.GraphAnnotationZ[aCnt-1]+4;\par
+     Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.GraphAnnotationY[aCnt-1]-24;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_STARTPOLY;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.GraphAnnotationX[aCnt-2]-2;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.GraphAnnotationZ[aCnt-2]+4;\par
+     Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.GraphAnnotationY[aCnt-2]+24;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.GraphAnnotationX[aCnt-3]-2;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.GraphAnnotationZ[aCnt-3]-4;\par
+     Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.GraphAnnotationY[aCnt-3]+24;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.GraphAnnotationX[aCnt-4]-2;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.GraphAnnotationZ[aCnt-4]-4;\par
+     Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.GraphAnnotationY[aCnt-4]-24;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ENDPOLYGON;\par
+     Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 0, 255, 255);\par
+     aCnt := aCnt + 1;\par
+\par
+     // Example of drawing Ellipses\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := 0;\par
+     Pe3do1.GraphAnnotationY[aCnt] := 1;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := 0;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_AXIS_DIRECTION;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := 10;\par
+     Pe3do1.GraphAnnotationY[aCnt] := 10;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := 1;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_MAJORMINOR_RADII;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := centerx;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := centerz;\par
+     Pe3do1.GraphAnnotationY[aCnt] := starty - 175;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ELLIPSE_MEDIUM;\par
+     Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := 20;\par
+     Pe3do1.GraphAnnotationY[aCnt] := 20;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := 1;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_MAJORMINOR_RADII;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := centerx;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := centerz;\par
+     Pe3do1.GraphAnnotationY[aCnt] := starty - 500;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ELLIPSE_MEDIUM;\par
+     Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := 15;\par
+     Pe3do1.GraphAnnotationY[aCnt] := 15;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := 1;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_MAJORMINOR_RADII;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := centerx;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := centerz;\par
+     Pe3do1.GraphAnnotationY[aCnt] := starty - 500;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ELLIPSE_THIN;\par
+     Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := 10;\par
+     Pe3do1.GraphAnnotationY[aCnt] := 10;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := 1;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_MAJORMINOR_RADII;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := centerx;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := centerz;\par
+     Pe3do1.GraphAnnotationY[aCnt] := starty - 500;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ELLIPSE_THIN;\par
+     Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := 5;\par
+     Pe3do1.GraphAnnotationY[aCnt] := 5;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := 1;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_MAJORMINOR_RADII;\par
+     aCnt := aCnt + 1;\par
+\par
+     Pe3do1.GraphAnnotationX[aCnt] := centerx;\par
+     Pe3do1.GraphAnnotationZ[aCnt] := centerz;\par
+     Pe3do1.GraphAnnotationY[aCnt] := starty - 500;\par
+     Pe3do1.GraphAnnotationText[aCnt] := '';\par
+     Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ELLIPSE_THIN;\par
+     Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+\par
+    // v9.5 features\par
+\par
+    // if one wants to control tube min thickness and range of thicknesses\par
+    Pe3do1.TubeThicknessMin := 0.5;\par
+    Pe3do1.TubeThicknessInc := 1.0;\par
+    Pe3do1.LinesOrTubes := eLinesOrTubes.tdAllTubes;\par
+\par
+    // Other graph annotation settings //\par
+    Pe3do1.AnnotationsInFront := false;\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := true;\par
+    Pe3do1.AnnotationsInFront := false;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.RotationMenu := eMenuControl.tdHideMenu;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // Enable CursorPromptTracking HighlighColor, etc only applicable to Direct3D RenderEngine\par
+    Pe3do1.CursorPromptTracking := True;\par
+    Pe3do1.CursorPromptStyle := tdYValue;\par
+    Pe3do1.DataPrecision := eDataPrecision.tdTwoDecimals;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 225, 0, 0);\par
+    Pe3do1.HandCursor := 1;\par
+    Pe3do1.CursorPromptLocation := eCursorPromptLocation.tdTooltip;\par
+\par
+    Pe3do1.TrackingCustomDataText := true;\par
+    Pe3do1.TrackingCustomOtherText := true;\par
+\par
+    Pe3do1.TrackingTooltipBkColor := Pe3do1.PEargb(0, 80, 80, 80);\par
+    Pe3do1.TrackingTooltipTextColor := Pe3do1.PEargb(0, 245, 245, 245);\par
+    Pe3do1.TrackingTooltipMaxWidth := 200;\par
+\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 fly down well/toggles ViewingMode| |Popup Menu size/hide annotation text.';\par
+    Pe3do1.Force3dxVerticeRebuild := true;\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := true;\par
+\par
+    \{\par
+    //////////////////////////////////////\par
+    // Pe3do1MouseMove event //\par
+    ///////////////////////////\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.CursorValueY );\par
+        s2 := 'Value under mouse ' + s;\par
+        s := FormatFloat('#.', hsd.w1 );\par
+        s2 := s2 + ' Subset ' + s;\par
+        s := FormatFloat('#.', hsd.w2 );\par
+        s2 := s2 + ' Point ' + s;\par
+        Form6.Caption := s2;\par
+    end\par
+    \}\par
+\par
+  End\par
+Else If nChart = 404 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{404  3D Scatter Chart\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Non-Surface chart, set PolyMode //\par
+    Pe3do1.PolyMode := tdScatter;\par
+\par
+    // Do not auto fit to shape of window //\par
+    Pe3do1.DxFitControlShape := False;\par
+    Pe3do1.GridAspectY := 0.5;\par
+    Pe3do1.PointSize := ePointSize.tdSmallPoints;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.ViewingHeight := 35;\par
+    Pe3do1.DegreeOfRotation := 68;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    // v9 feature\par
+    Pe3do1.DxFOV := 8; // isometric pictural perspective\par
+    Pe3do1.DxViewportY := 0.0;\par
+\par
+    // zoom out\par
+    Pe3do1.DxZoom := -5.0;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 2;\par
+    Pe3do1.MouseWheelZoomSmoothness := 4;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Set the amount of data //\par
+    Pe3do1.Subsets := 10;\par
+    Pe3do1.Points := 500;\par
+\par
+    Pe3do1.XData[9, 499] := 0.0; // tip to pre allocate memory if not using PEvset\par
+    Pe3do1.YData[9, 499] := 0.0; // sets last point first\par
+    Pe3do1.ZData[9, 499] := 0.0;\par
+\par
+    // Pass data, First two subsets //\par
+    for s := 0 to 1 do\par
+    begin\par
+        for p := 0 to 499 do\par
+        begin\par
+            Pe3do1.XData[s,p] := (5000 + (5 * cos(p* 0.24))) * (p+1);\par
+            if s =  0 then\par
+                Pe3do1.YData[s,p] := 5100 + (35.0 * cos(p * 0.22)) + (10.0 * sin((s * 0.1) * 0.94))\par
+            else\par
+                Pe3do1.YData[s,p] := 5100 +(35.0 * cos(p * 0.08)) + (10.0 * cos((s * 0.25) * 0.6));\par
+            Pe3do1.ZData[s,p] := 5000 + (5.0 * (sin(p * 0.08)));\par
+        end;\par
+    end;\par
+\par
+    // Pass more data, Second two subsets //\par
+    for s := 0 to 1 do\par
+    begin\par
+        for p := 0 to 499 do\par
+        begin\par
+            Pe3do1.XData[s+2,p] := (5000 + (5.0 * cos(p * 0.14) + 20)) * (p+1);\par
+            if s =  0 then\par
+                Pe3do1.YData[s+2,p] := 5220 + (35.0 * cos(p * 0.2)) + (10.0 * sin((s * 0.1) * 0.74))\par
+            else\par
+                Pe3do1.YData[s+2,p] := 5220 + (35.0 * cos(p * 0.1)) + (10.0 * cos((s * 0.25) * 0.74)) + 40;\par
+            Pe3do1.ZData[s+2,p] := 5000 + (5.0 * (sin(p * 0.16)) + 20);\par
+        end;\par
+    end;\par
+\par
+    // Pass more data, Third two subsets //\par
+    for s := 0 to 1 do\par
+    begin\par
+        for p := 0 to 499 do\par
+        begin\par
+            Pe3do1.XData[s+4, p] := (5000 + (5.0 * cos(p * 0.07) - 20)) * (p+1);\par
+            if s =  0 then\par
+                Pe3do1.YData[s+4, p] := 5000 + (35.0 * cos(p * 0.08)) + (10.0 * sin((s * 0.07) * 0.64))\par
+            else\par
+                Pe3do1.YData[s+4, p] := 5000 + (35.0 * cos(p * 0.2)) + (10.0 * cos((s * 0.15) * 1.94)) + 40;\par
+            Pe3do1.ZData[s+4, p] := 5000 + (5.0 * (sin(p * 0.09)) + 20);\par
+        end;\par
+    end;\par
+\par
+    // Pass more data, Fourth two subsets //\par
+    for s := 0 to 1 do\par
+    begin\par
+         for p := 0 to 499 do\par
+         begin\par
+             Pe3do1.XData[s+6, p] := (5000 + (5.0 * cos(p * 0.12) - 20)) * (p+1);\par
+             if s =  0 then\par
+                 Pe3do1.YData[s+6, p] := 5220 + (35.0 * cos(p * 0.3)) + (10.0 * sin((s * 0.08) * 1.74))\par
+             else\par
+                 Pe3do1.YData[s+6, p] := 5220 + (35.0 * cos(p * 0.2)) + (10.0 * cos((s * 0.75) * 0.774)) - 40;\par
+            Pe3do1.ZData[s+6, p] := 5000 + (5.0 * (sin(p * 0.36)) - 20);\par
+         end;\par
+    end;\par
+\par
+    // Pass more data, Fifth two subsets //\par
+    for s := 0 to 1 do\par
+    begin\par
+       for p := 0 to 499 do\par
+       begin\par
+           Pe3do1.XData[s+8, p] := 5000 + (5.0 * cos(p * 0.14) + 20);\par
+           if s =  0 then\par
+               Pe3do1.YData[s+8, p] := 5040 + (25.0 * cos(p * 0.1)) + (10.0 * sin((s * 0.02) * 3.74))\par
+           else\par
+               Pe3do1.YData[s+8, p] := 5040 + (55.0 * cos(p * 0.2)) + (10.0 * cos((s * 0.05) * 5.74)) + 40;\par
+           Pe3do1.ZData[s+8, p] := 5000 + (5.0 * (sin(p * 0.16)) - 20);\par
+       end;\par
+    end;\par
+\par
+    Pe3do1.XAxisScaleControl := PEAC_LOG;\par
+    Pe3do1.YAxisScaleControl := PEAC_LOG;\par
+    Pe3do1.ZAxisScaleControl := PEAC_LOG;\par
+\par
+    Pe3do1.FontSize := tdLarge;\par
+    Pe3do1.FontSizeGlobalCntl := 1.1;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.MainTitle := 'LOG + Isometric Perspective';\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := eQuickStyle.tdDarkShadow;\par
+    Pe3do1.GraphForeColor := Pe3do1.PEargb(255,255,255,255);\par
+    Pe3do1.XZBackColor := Pe3do1.Peargb(255, 85, 85, 85);\par
+    Pe3do1.YBackColor := Pe3do1.PEargb(255, 85, 85, 85);\par
+\par
+    // Set Various Other Properties //\par
+\par
+    Pe3do1.SubsetColors[0] := Pe3do1.PEargb(255,198,198,0);\par
+    Pe3do1.SubsetColors[1] := Pe3do1.PEargb(255,0, 198, 198);\par
+    Pe3do1.SubsetColors[2] := Pe3do1.PEargb(255,0, 198, 0);\par
+    Pe3do1.SubsetColors[3] := Pe3do1.PEargb(255,198, 0, 0);\par
+    Pe3do1.SubsetColors[4] := Pe3do1.PEargb(255,0, 0, 198);\par
+    Pe3do1.SubsetColors[5] := Pe3do1.PEargb(255,192,192,192);\par
+    Pe3do1.SubsetColors[6] := Pe3do1.PEargb(255,198, 0, 198);\par
+    Pe3do1.SubsetColors[7] := Pe3do1.PEargb(255,200, 198, 150);\par
+    Pe3do1.SubsetColors[8] := Pe3do1.PEargb(255,200, 200, 140);\par
+    Pe3do1.SubsetColors[9] := Pe3do1.PEargb(255,150, 0, 198);\par
+\par
+    Pe3do1.SubsetPointTypes[0] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[1] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[2] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[3] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[4] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[5] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[6] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[7] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[8] := PEPT_DOTSOLID;\par
+    Pe3do1.SubsetPointTypes[9] := PEPT_DOTSOLID;\par
+\par
+    Pe3do1.SubsetLineTypes[0] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[1] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[2] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[3] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[4] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[5] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[6] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[7] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[8] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.SubsetLineTypes[9] := PELT_MEDIUMTHINSOLID;\par
+    Pe3do1.LinesOrTubes := eLinesOrTubes.tdAllLines;\par
+\par
+    x := 2.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 0, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 1, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 2, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 3, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 4, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 5, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 6, @x);\par
+    x := 2.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 7, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 8, @x);\par
+    x := 1.2;  PEvsetcellW(Pe3do1.hObject, PEP_faSUBSETPOINTSIZES, 9, @x);\par
+\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+    for annot := 0 to 9 do\par
+    begin\par
+        nRndRow := Random(10);\par
+        nRndCol := Random(500);\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LARGEDOTSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,0,255,0);\par
+        m_nAnnotationStartIndices[annot] := aCnt;\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,0,255,0);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 80;\par
+    Pe3do1.AllowGraphAnnotHotSpots := true;\par
+    Pe3do1.DegreePrompting := true;\par
+\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255,255,0,0);\par
+\par
+    Pe3do1.SubsetObstacles[0] := true;\par
+    Pe3do1.SubsetObstacles[1] := true;\par
+    Pe3do1.SubsetObstacles[2] := true;\par
+    Pe3do1.SubsetObstacles[3] := true;\par
+    Pe3do1.SubsetObstacles[4] := true;\par
+    Pe3do1.SubsetObstacles[5] := true;\par
+    Pe3do1.SubsetObstacles[6] := true;\par
+    Pe3do1.SubsetObstacles[7] := true;\par
+    Pe3do1.SubsetObstacles[8] := true;\par
+    Pe3do1.SubsetObstacles[9] := true;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // Set subset labels and titles //\par
+    Pe3do1.SubsetLabels[0] := 'Data 1';\par
+    Pe3do1.SubsetLabels[1] := 'Data 2';\par
+    Pe3do1.SubsetLabels[2] := 'Data 3';\par
+    Pe3do1.SubsetLabels[3] := 'Data 4';\par
+    Pe3do1.SubsetLabels[4] := 'Data 5';\par
+    Pe3do1.SubsetLabels[5] := 'Data 6';\par
+    Pe3do1.SubsetLabels[6] := 'Data 7';\par
+    Pe3do1.SubsetLabels[7] := 'Data 8';\par
+    Pe3do1.SubsetLabels[8] := 'Data 9';\par
+    Pe3do1.SubsetLabels[9] := 'Data 10';\par
+\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    // Set Plotting methods //\par
+    Pe3do1.PlottingMethod := td0;   // ' Points\par
+\par
+    // Set legend location //\par
+    Pe3do1.LegendLocation := tdLegendLeft;\par
+    Pe3do1.ShowLegend := False;\par
+    Pe3do1.LegendLocationMenu := eMenuControl.tdShowMenu;\par
+\par
+    // Prepare images in memory //\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.CacheBmp := True;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+    Pe3do1.AllowPointsPlusLine := False;\par
+\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdXYZValue;\par
+    Pe3do1.CursorPromptLocation := eCursorPromptLocation.tdText;\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowSvgExport := True;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    // At end of Direct3D initializations, don't forget\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+    \{\par
+    //////////////////////////////////////\par
+    // Pe3do1MouseMove event //\par
+    ///////////////////////////\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.CursorValueY );\par
+        s2 := 'Value under mouse ' + s;\par
+        s := FormatFloat('#.', hsd.w1 );\par
+        s2 := s2 + ' Subset ' + s;\par
+        s := FormatFloat('#.', hsd.w2 );\par
+        s2 := s2 + ' Point ' + s;\par
+        Form6.Caption := s2;\par
+    end\par
+    \}\par
+\par
+\par
+\par
+\par
+  End\par
+Else If nChart = 405 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{405  3D Bar Chart\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 4;\par
+    Pe3do1.MouseWheelZoomSmoothness := 4;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Non-Surface chart, set PolyMode //\par
+    Pe3do1.PolyMode := tdThreeDBar;\par
+\par
+    // Set light location\par
+    Light0.X := 4.6; Light0.Y := 0.8;  Light0.Z := 9.5;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Code to get partial data from a binary file //\par
+    nStartRow := 216;\par
+    nEndRow := 230;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+\par
+    nStartCol := 156;\par
+    nEndCol := 170;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * 2250000);\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], 2250000);\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nQ);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyXData[o] := Col + 1;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                    pMyZData[o] := Row + 1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nQ);\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+    FreeMem(pMyXData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    // Set Various Other Properties //\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.SubsetColors[0] := Pe3do1.PEargb(216, 0, 148, 0);\par
+    Pe3do1.SubsetColors[1] := Pe3do1.PEargb(216, 148, 0, 0);\par
+    Pe3do1.SubsetColors[2] := Pe3do1.PEargb(216, 0, 0, 148);\par
+    Pe3do1.SubsetColors[3] := Pe3do1.PEargb(216, 148, 148, 0);\par
+    Pe3do1.SubsetColors[4] := Pe3do1.PEargb(216, 0, 148, 148);\par
+    Pe3do1.SubsetColors[5] := Pe3do1.PEargb(216, 0, 182, 0);\par
+    Pe3do1.SubsetColors[6] := Pe3do1.PEargb(216, 182, 0, 0);\par
+    Pe3do1.SubsetColors[7] := Pe3do1.PEargb(216, 0, 0, 182);\par
+    Pe3do1.SubsetColors[8] := Pe3do1.PEargb(216, 182, 182, 0);\par
+    Pe3do1.SubsetColors[9] := Pe3do1.PEargb(216, 0, 182, 182);\par
+    Pe3do1.SubsetColors[10] := Pe3do1.PEargb(216, 0, 198, 0);\par
+    Pe3do1.SubsetColors[11] := Pe3do1.PEargb(216, 198, 0, 0);\par
+    Pe3do1.SubsetColors[12] := Pe3do1.PEargb(216, 0, 0, 198);\par
+    Pe3do1.SubsetColors[13] := Pe3do1.PEargb(216, 198, 198, 0);\par
+    Pe3do1.SubsetColors[14] := Pe3do1.PEargb(216, 0, 198, 148);\par
+\par
+    // Set subset labels for z axis  //\par
+    Pe3do1.SubsetLabels[0] := 'Row 1';\par
+    Pe3do1.SubsetLabels[1] := 'Row 2';\par
+    Pe3do1.SubsetLabels[2] := 'Row 3';\par
+    Pe3do1.SubsetLabels[3] := 'Row 4';\par
+    Pe3do1.SubsetLabels[4] := 'Row 5';\par
+    Pe3do1.SubsetLabels[5] := 'Row 6';\par
+    Pe3do1.SubsetLabels[6] := 'Row 7';\par
+    Pe3do1.SubsetLabels[7] := 'Row 8';\par
+    Pe3do1.SubsetLabels[8] := 'Row 9';\par
+    Pe3do1.SubsetLabels[9] := 'Row 10';\par
+    Pe3do1.SubsetLabels[10] := 'Row 11';\par
+    Pe3do1.SubsetLabels[11] := 'Row 12';\par
+    Pe3do1.SubsetLabels[12] := 'Row 13';\par
+    Pe3do1.SubsetLabels[13] := 'Row 14';\par
+    Pe3do1.SubsetLabels[14] := 'Row 15';\par
+\par
+    // Set point labels for x axis //\par
+    Pe3do1.PointLabels[0] := 'Col 1';\par
+    Pe3do1.PointLabels[1] := 'Col 2';\par
+    Pe3do1.PointLabels[2] := 'Col 3';\par
+    Pe3do1.PointLabels[3] := 'Col 4';\par
+    Pe3do1.PointLabels[4] := 'Col 5';\par
+    Pe3do1.PointLabels[5] := 'Col 6';\par
+    Pe3do1.PointLabels[6] := 'Col 7';\par
+    Pe3do1.PointLabels[7] := 'Col 8';\par
+    Pe3do1.PointLabels[8] := 'Col 9';\par
+    Pe3do1.PointLabels[9] := 'Col 10';\par
+    Pe3do1.PointLabels[10] := 'Col 11';\par
+    Pe3do1.PointLabels[11] := 'Col 12';\par
+    Pe3do1.PointLabels[12] := 'Col 13';\par
+    Pe3do1.PointLabels[13] := 'Col 14';\par
+    Pe3do1.PointLabels[14] := 'Col 15';\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := eQuickStyle.tdDarkShadow;\par
+\par
+    // Set camera position //\par
+    Pe3do1.ViewingHeight := 19;\par
+    Pe3do1.DegreeOfRotation := 338;\par
+\par
+    // Set Plotting methods //\par
+    Pe3do1.PlottingMethod := ePlottingMethod(2); // Shading\par
+\par
+    // Set small font size //\par
+    Pe3do1.FontSize := tdMedium;\par
+\par
+    // Prepare images in memory //\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.AllowStylePage := False;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // Add Some Padding on Right and Bottom //\par
+    Pe3do1.ImageAdjustLeft := 100;\par
+    Pe3do1.ImageAdjustRight := 100;\par
+    Pe3do1.ImageAdjustBottom := 100;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.CursorPromptLocation := eCursorPromptLocation.tdText;\par
+    Pe3do1.FontSizeTrackingCntl := 2.0;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 255, 255);\par
+    Pe3do1.DataPrecision := eDataPrecision.tdNoDecimals;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+\par
+    Pe3do1.GraphAnnotationX[aCnt] := 1.5;\par
+    Pe3do1.GraphAnnotationZ[aCnt] := 14.5;\par
+    Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[0, 0];\par
+    Pe3do1.GraphAnnotationType[aCnt] := PEGAT_THICKSOLIDLINE;\par
+    Pe3do1.GraphAnnotationText[aCnt] := '';\par
+    Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+    aCnt := aCnt + 1;\par
+    for annot := 1 to nTargetCols-1 do\par
+    begin\par
+        Pe3do1.GraphAnnotationX[aCnt] := 1.5 + annot;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := 14.5;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[0, annot];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LINECONTINUE;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    for annot := 0 to 9 do\par
+    begin\par
+        nRndRow := Random(nTargetRows);\par
+        nRndCol := Random(nTargetCols);\par
+        Pe3do1.GraphAnnotationX[aCnt] := nRndCol + 1.5;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nRndRow + 1.5;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_DIAMONDSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := nRndCol + 1.5;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nRndRow + 1.5;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := false;\par
+    Pe3do1.DegreePrompting := true;\par
+\par
+\par
+    // At end of Direct3D initializations\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+  End\par
+Else If nChart = 406 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{406  3D Polygon Data\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 4;\par
+    Pe3do1.MouseWheelZoomSmoothness := 4;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    Pe3do1.PolyMode := tdPOLYGONDATA;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    // Set Titles //\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.FontSize := tdMedium;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    // Hide Axes //\par
+    Pe3do1.ShowXAxis := tdEmpty;\par
+    Pe3do1.ShowYAxis := tdEmpty;\par
+    Pe3do1.ShowZAxis := tdEmpty;\par
+\par
+    // Set camera location //\par
+    Pe3do1.ViewingHeight := 5;\par
+\par
+    // Set Plotting Method and etc //\par
+    Pe3do1.PlottingMethod := td2; //surface with shading\par
+    Pe3do1.RotationDetail := tdFULLDETAIL;\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdINCBY1;\par
+    Pe3do1.AllowWireFrame := False;\par
+\par
+    //! THIS IS IMPORTANT.  PEP_bADDSKIRTS will tell ProEssentials to use logic\par
+    //! which assumes object is enclosed or not.  In this case, a Sphere is a\par
+    //! closed object, so we set this property = True.\par
+    //! If polygon data describes a surface, then leave this property false.\par
+    Pe3do1.AddSkirts := True;  // NA Direct3D\par
+\par
+    // Do not auto fit to shape of window, keep things square //\par
+    // Keeps the sphere a sphere in 3dx\par
+    Pe3do1.DxFitControlShape := False;\par
+\par
+    // Set a light location\par
+    Light0.X := 1.87; Light0.Y := -1.92;  Light0.Z := 1.52;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := 1;\par
+\par
+    // Set a chart translation //\par
+    Pe3do1.DxViewportX := 0;\par
+    Pe3do1.DxViewportY := 0.08;\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+    Pe3do1.DeskColor := 1;\par
+    Pe3do1.DeskBmpFilename := 'starfield.jpg';\par
+    Pe3do1.DeskBmpStyle := tdTiledBlt;\par
+\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.AllowStylePage := False;\par
+\par
+    fInc := 1.0;\par
+    factor_theta := 0.9;\par
+    factor_phi := 0.9;\par
+    radius := 9;\par
+\par
+    tt := Round((360.0 / factor_theta) - 1);\par
+    ph := Round((360.0 / factor_phi) - 1);\par
+\par
+    theta := 0;\par
+    phi := 0;\par
+\par
+    GetMem(pEDGEx, SizeOf(Single) * (tt * ph));\par
+    GetMem(pEDGEy, SizeOf(Single) * (tt * ph));\par
+    GetMem(pEDGEz, SizeOf(Single) * (tt * ph));\par
+\par
+    GetMem(pPoly, SizeOf(POLYGONDATA) * 720000);\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * (2250000) );\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], (2250000) );\par
+    CloseFile(pfile);\par
+\par
+    //Convert spherical coordiantes to cartesian //\par
+    For a := 0 To tt Do\par
+    Begin\par
+        For b := 0 To ph  Do\par
+        Begin\par
+            If (a < tt / 2) Then\par
+                radius2 := radius + ((pElevData[(((a)) * 1500) + (b)]) * 0.00007 * fInc)\par
+            Else\par
+                radius2 := radius + ((pElevData[((tt - (a)) * 1500) + (b)]) * 0.00007 * fInc);\par
+            pEDGEx^[a, b] := ( radius2 * Cos((3.141592 / 180.0) * theta) * Sin((3.141592 / 180.0) * phi) );\par
+            pEDGEz^[a, b] := ( radius2 * Sin((3.141592 / 180.0) * theta) * Sin((3.141592 / 180.0) * phi) );\par
+            pEDGEy^[a, b] := ( radius2 * Cos((3.141592 / 180.0) * phi) );\par
+            phi := phi + factor_phi;\par
+        End;\par
+        theta := theta + factor_theta;\par
+        phi := 0;\par
+    End;\par
+\par
+    //The number of polygons will equal the half\par
+    //the number of coordinates obtained.\par
+    //To place each polygon points in a counter clockwise order a\par
+    //simple stepping procedure is needed. We are placing points in\par
+    //clockwise rotation buts polygons in counterclockwise\par
+    //   1------2  5-----6\par
+    //          |        |\par
+    //          |        |\par
+    //   4------3  8-----7\par
+\par
+    m := 0;\par
+    n := 0;\par
+    For i := 0 To ((((ph + 1) * (tt + 1)) div 2) - 1) Do\par
+    Begin\par
+        // Establish if it is a 4 or 3 edged polygon\par
+        pPoly^[i].NumberOfVertices := 4;\par
+\par
+        // Rounding may be unnecessary in most projects to create a smooth surface\par
+        pPoly^[i].Vertices[0].x := pEDGEx^[n, m];\par
+        pPoly^[i].Vertices[0].y := pEDGEy^[n, m];\par
+        pPoly^[i].Vertices[0].z := pEDGEz^[n, m];\par
+\par
+        q := n + 1; // Prepare for next theta point\par
+        r := m + 1; // Prepare for next phi point\par
+\par
+        // The end of the row is actually the beginning of the row\par
+        if (n > tt - 1) then q := 0;\par
+        pPoly^[i].Vertices[1].x := pEDGEx^[q, m] ;\par
+        pPoly^[i].Vertices[1].y := pEDGEy^[q, m];\par
+        pPoly^[i].Vertices[1].z := pEDGEz^[q, m];\par
+        if q = 0 then   n := tt;\par
+        if (n > tt - 1) then  q := 0;\par
+        pPoly[i].Vertices[2].x := pEDGEx^[q, r];\par
+        pPoly[i].Vertices[2].y := pEDGEy^[q, r];\par
+        pPoly[i].Vertices[2].z := pEDGEz^[q, r];\par
+        if q = 0 then  n := tt;\par
+        pPoly[i].Vertices[3].x := pEDGEx^[n, r];\par
+        pPoly[i].Vertices[3].y := pEDGEy^[n, r];\par
+        pPoly[i].Vertices[3].z := pEDGEz^[n, r];\par
+\par
+        // Set the polygons color,  with a bit of logic to produce longitude and latitude lines\par
+        //! Note, ProEssentials DLL internally stores colors in BGR order (the reverse of .NET),\par
+        di := i mod 40;\par
+        dm := m mod 40;\par
+\par
+        //Set the polygons color\par
+        If ((di < 0.025) Or (dm < 0.025)) then\par
+        begin\par
+            pPoly^[i].PolyColor := Int32( Pe3do1.PEargb(255, 159, 159, 159) )\par
+        end\par
+        Else\par
+            pPoly^[i].PolyColor := Int32( Pe3do1.PEargb(255, 155, 155, 155) );\par
+\par
+        // This establishes when the next row and column of points is increased\par
+        if (((i + 1) mod (ph + 1)) = 0) and (i <> 0) then\par
+            m := m + 1; //Step to the next phi(row)\par
+\par
+        If (((i + 1) mod (tt + 1)) <> 0) or (i = 0) Then\par
+        begin\par
+            n := n + 1 //Step to the next theta(column)\par
+        end\par
+        Else\par
+            n := 0; //If you loop start at the beginning\par
+    End; //End for\par
+\par
+    // Set the polygons in one call //\par
+    PEvsetW(Pe3do1.hObject, PEP_structPOLYDATA, @pPoly^[0], (((ph + 1) * (tt + 1)) div 2));\par
+\par
+    FreeMem(pEDGEx, SizeOf(Single) * (tt*ph));\par
+    FreeMem(pEDGEy, SizeOf(Single) * (tt*ph));\par
+    FreeMem(pEDGEz, SizeOf(Single) * (tt*ph));\par
+    FreeMem(pPoly, SizeOf(POLYGONDATA) * 720000  );\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := False;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    Pe3do1.GridLineMenu := eMenuControl.tdHideMenu;\par
+    Pe3do1.ShowWireFrameMenu := eMenuControl.tdHideMenu;\par
+    Pe3do1.PlotMethodMenu := eMenuControl.tdHideMenu;\par
+\par
+    Pe3do1.Force3dxVerticeRebuild := true;\par
+\par
+    Pe3do1.PEactions := tdReinitAndReset;\par
+    Pe3do1.AutoRotation := True;\par
+\par
+  End\par
+Else If nChart = 407 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{407  3D Waterfall Plot\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 6;\par
+    Pe3do1.MouseWheelZoomSmoothness := 6;\par
+    Pe3do1.PinchZoomSmoothness := 3;\par
+\par
+    // Non-Surface chart, set PolyMode //\par
+    Pe3do1.PolyMode := tdScatter;\par
+\par
+    // Disable Legend //\par
+    Pe3do1.SubsetsToLegend[0] := -1;\par
+\par
+    // Code to get partial data from a binary file //\par
+    nStartRow := 150;\par
+    nEndRow := 250;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+    nStartCol := 100;\par
+    nEndCol := 200;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * 2250000);\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], 2250000);\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nQ);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To  1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyXData[o] := Col + 1;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                    pMyZData[o] := Row + 1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nQ);\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+    FreeMem(pMyXData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    // v9.5\par
+    Pe3do1.WaterfallContours := true;\par
+    Pe3do1.ContourColorBlends := 20;\par
+    Pe3do1.ContourColorAlpha := 255;\par
+    Pe3do1.ContourColorSet := eContourColorSet.tdCC_BlueCyanGreenYellowBrownWhite;\par
+\par
+    Pe3do1.WaterfallBorders := true;\par
+    Pe3do1.BarBorderColor := Pe3do1.PEargb(255, 0, 0, 0);\par
+    for s := 0 To Pe3do1.Subsets-1 do\par
+       Pe3do1.SubsetLineTypes[s] := PELT_MEDIUMTHINSOLID;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+    Pe3do1.MainTitle := '3D Waterfall or layers of areas';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    // Set camera position //\par
+    Pe3do1.ViewingHeight := 36;\par
+    Pe3do1.DegreeOfRotation := 210;\par
+    Pe3do1.DxZoom := 0.47;\par
+\par
+    // Set Plotting methods //\par
+    Pe3do1.PlottingMethod := ePlottingMethod(3); // Area\par
+    Pe3do1.AllowArea := True;\par
+\par
+    Pe3do1.DxFitControlShape := true;\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowLegendMenu := eMenuControl.tdHideMenu;\par
+    Pe3do1.ShowWireframeMenu := eMenuControl.tdHideMenu;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+\par
+    for annot := 0 to 9 do\par
+    begin\par
+        nRndRow := Random(nTargetRows);\par
+        nRndCol := Random(nTargetCols);\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_DIAMONDSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    // Add a Graph Annotation to highlight a slice with a thick line\par
+    // int nHighLightSubset = 10;\par
+    aCnt := 50; // offset\par
+    p := 0;\par
+\par
+    Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[10, p];\par
+    Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[10, p];\par
+    Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[10, p] + 20;\par
+    Pe3do1.GraphAnnotationType[aCnt] := PEGAT_STARTPOLY;\par
+    aCnt := aCnt + 1;\par
+\par
+    for p := 1 to nTargetCols-2 do\par
+    begin\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[10, p];\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[10, p];\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[10, p] + 20;\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+        aCnt := aCnt + 1;\par
+    end;\par
+    p := nTargetCols-1;\par
+    Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[10, p];\par
+    Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[10, p];\par
+    Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[10, p] + 20;\par
+    Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ENDPOLYLINE_THICK;\par
+    Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,0,0);\par
+    Pe3do1.GraphAnnotationText[aCnt] := '';\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := true;\par
+    Pe3do1.GraphAnnotationSizeCntl := 1.2;\par
+    Pe3do1.DegreePrompting := true;\par
+\par
+    Pe3do1.LinesOrTubes := eLinesOrTubes.tdAllTubes;\par
+    Pe3do1.TubeThicknessMin := 0.3;\par
+    Pe3do1.AllowDataHotSpots := true;\par
+\par
+    // Set small font size //\par
+    Pe3do1.FontSize := tdMedium;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    // Add Some Padding around image //\par
+    Pe3do1.ImageAdjustLeft := 100;\par
+    Pe3do1.ImageAdjustRight := 100;\par
+    Pe3do1.ImageAdjustBottom := 100;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    // At end of Direct3D initializations\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+  End\par
+Else If nChart = 408 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{408  3D Large shaded surface\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 3;\par
+    Pe3do1.MouseWheelZoomSmoothness := 3;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // CursorPromptTracking //\par
+    Pe3do1.CursorPromptStyle := tdYValue;\par
+    Pe3do1.CursorPromptTracking := True;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 225, 0, 0);\par
+    Pe3do1.AllowDataHotSpots := False;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.ViewingHeight := 22;\par
+    Pe3do1.DegreeOfRotation := 301;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := 0.0;\par
+\par
+    // Set a light location\par
+    Light0.X := 1.5; Light0.Y := -1.50;  Light0.Z := 2.0;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Set a chart translation\par
+    Pe3do1.DxViewportX := 0.0;\par
+    Pe3do1.DxViewportY := 0.7;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    nStartRow := 0;\par
+    nEndRow := 1000;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+\par
+    nStartCol := 0;\par
+    nEndCol := 1000;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * 2250000);\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], 2250000);\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nTargetCols);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nTargetRows);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    if (Row = nStartRow) then pMyXData[Col - nStartCol] := Col + 1;  // v9.5\par
+                    if (Col = nStartCol) then pMyZData[Row - nStartRow] := Row + 1;\par
+                    // See our help, topic SubsetByPoint to understand the below formula\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nTargetCols);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nTargetRows);\par
+    Pe3do1.DuplicateDataX := eDuplicateData.tdPointIncrement;\par
+    Pe3do1.DuplicateDataZ := eDuplicateData.tdSubsetIncrement;\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+    FreeMem(pMyXData, SizeOf(Single) * nTargetCols);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nTargetRows);\par
+\par
+    Pe3do1.ContourStyleLegend := True;\par
+    Pe3do1.LegendLocation := tdLegendRight;\par
+    Pe3do1.LegendLocationMenu := tdShowMenu;\par
+    Pe3do1.ShowLegend := True;\par
+\par
+    // Set Contour Color regions //\par
+    Pe3do1.SubsetColors[-1] := 0; // clears items\par
+    for s := 0 To 31 do\par
+    begin\par
+        Pe3do1.SubsetColors[s] := Pe3do1.PEargb(255, 0, 31 + (s * 7), 95 + (s * 5));\par
+        Pe3do1.SubsetColors[s + 32] := Pe3do1.PEargb(255, 0, 95 + (s * 5), 0);\par
+    end;\par
+    for s := 0 To 35 do\par
+        Pe3do1.SubsetColors[s + 64] := Pe3do1.PEargb(255, 128 + (s * 3), 128 + (s * 3), 128 + (s * 3));\par
+\par
+    // For when ViewingStyle is monochrome //\par
+    for s := 0 To 99 do\par
+        Pe3do1.SubsetShades[s] := Pe3do1.PEargb(255, 50 + (s * 2), 50 + (s * 2), 50 + (s * 2));\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 215, 215, 215);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 228, 228, 228);\par
+\par
+    // Set the plotting method //\par
+    // There are different plotting method values for each case of PolyMode.\par
+    Pe3do1.PlottingMethod := ePlottingMethod(4);  // Surface Contour //\par
+    Pe3do1.AllowWireFrame := False;\par
+    Pe3do1.AllowPlotCustomization := False;\par
+\par
+    Pe3do1.ContourLegendPrecision := 1;\par
+    Pe3do1.ContourStyleLegend := true;\par
+    Pe3do1.ShowLegend := true;\par
+    Pe3do1.LegendLocation := eLegendLocation.tdLegendRight;\par
+    Pe3do1.LegendLocationMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ContourMenu := eMenuControl.tdHideMenu;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    // Set Titles //\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+\par
+    // Set small font size //\par
+    Pe3do1.FontSize := tdMedium;\par
+\par
+    // Set Various Other Properties ///\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowSvgExport := True;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // Enable CursorPromptTracking HighlighColor, etc only applicable to Direct3D RenderEngine\par
+    Pe3do1.AllowDataHotSpots := false;\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.DataPrecision := eDataPrecision.tdOneDecimal;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.DxFitControlShape := false;\par
+    Pe3do1.GridAspectX := 2.0;\par
+    Pe3do1.GridAspectZ := 2.0;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+    for annot := 0 to 19 do\par
+    begin\par
+        nRndRow := Random(nTargetRows);\par
+        nRndCol := Random(nTargetCols);\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_DOTSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,0,0);\par
+        m_nAnnotationStartIndices[annot] := aCnt;\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := false;\par
+    Pe3do1.AnnotationsInFront := false;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // At end of Direct3D initializations, don't forget\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+  End\par
+Else If nChart = 409 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{409  2D Contour with Shadow\}\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // call Example 401 as a base to this example\par
+    CreateLargeSurfaceFlattenedFlyBy;\par
+\par
+    Pe3do1.ShowXAxis := eShowAxis.tdGridPlusAxisLabels;\par
+    Pe3do1.ShowZAxis := eShowAxis.tdGridPlusAxisLabels;\par
+    Pe3do1.AutoMinMaxPadding := 0;\par
+\par
+    // Zoom faster //\par
+    Pe3do1.MouseWheelZoomFactor := 20;\par
+    Pe3do1.PinchZoomFactor := 20;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.ViewingHeight := 90;\par
+    Pe3do1.DegreeOfRotation := 90;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := -36.0;\par
+    Pe3do1.GridAspectX := 15.0;\par
+    Pe3do1.GridAspectZ := 15.0;\par
+\par
+    // Set a chart translation\par
+    Pe3do1.DxViewportX := -0.84;\par
+    Pe3do1.DxViewportY := 0.55;\par
+\par
+    // Set light location\par
+    Light0.X := 1.72; Light0.Y := -0.71;  Light0.Z := -2.28;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Enable CursorPromptTracking HighlighColor, etc only applicable to Direct3D RenderEngine\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+    Pe3do1.AllowDataHotSpots := false;\par
+\par
+    Pe3do1.ContourMenu := eMenuControl.tdHideMenu;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.BitmapGradientMode := False;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+\par
+\par
+  End\par
+Else If nChart = 410 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{410  3D Surface Realtime\}\par
+\par
+    //! Use mouse wheel to rotate chart. //\par
+    //! Or click and drag scroll bar thumb tabs to also rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Load surface data into memory //\par
+    if pGlobalElevData = Nil then\par
+    begin\par
+        GetMem(pGlobalElevData, SizeOf(LongInt) * 2250000);\par
+        AssignFile(pfile, 'terrain2.bin');\par
+        Reset(pfile, 4);\tab // Record size = 4\par
+        BlockRead(pfile, pGlobalElevData[0], 2250000);\par
+        CloseFile(pfile);\par
+    end;\par
+\par
+    // Initialize a surface with 25 subsets by 50 points //\par
+    Pe3do1.Subsets := 150;\par
+    Pe3do1.Points := 150;\par
+\par
+    For s := 0 To 149 do\par
+    begin\par
+        For p := 0 To 149 do\par
+        begin\par
+            o := (s * 1500) + p;\par
+            Pe3do1.XData[s, p] := p + 1;\par
+            Pe3do1.YData[s, p] := pGlobalElevData[o] * 0.1;\par
+            Pe3do1.ZData[s, p] := s + 1;\par
+        end;\par
+    end;\par
+\par
+    m_nRealTimeCounter := 150; //keeps track of current row\par
+    m_nOverallCounter := 150;\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 210, 210, 255);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 210, 210, 255);\par
+\par
+    // Set the plotting method //\par
+    // There are different plotting method values for each case of PolyMode  //\par
+    Pe3do1.PlottingMethod := td2; // Surface shading\par
+    Pe3do1.AllowSurfaceContour := False;\par
+    Pe3do1.ContourMenu := eMenuControl.tdHideMenu;\par
+    Pe3do1.ShowWireframe := True;\par
+\par
+    // Set various other properties //\par
+    // Note RenderEngine 3DX requires setting renderengine before QuickStyle\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.ViewingHeight := 8;\par
+    Pe3do1.DegreeOfRotation := 93;\par
+\par
+    Light0.X := 0.05; Light0.Y := -1.0;  Light0.Z := 2.75;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    Pe3do1.DxZoom := -6.37;\par
+    Pe3do1.DxViewportX := 0.2;\par
+    Pe3do1.DxViewportY := 1.1;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := False;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+\par
+    Pe3do1.DegreePrompting := True;\par
+    Pe3do1.GridAspectX := 10;\par
+    Pe3do1.GridAspectZ := 2;\par
+\par
+    Pe3do1.FixedFonts := True;\par
+    Pe3do1.FontSize := tdMedium;\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+    Pe3do1.ImageAdjustRight := 50;\par
+    Pe3do1.ImageAdjustLeft := 50;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // export defaults //\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Timer1.Interval := 15;\par
+    Timer1.Enabled := True;\par
+\par
+    ////////////////////////////////////////////////////////\par
+    // the following code can be found in the Timer Event //\par
+    ////////////////////////////////////////////////////////\par
+    \{\par
+    For s := 0 To 149 do\par
+    begin\par
+        NewXData[s] := m_nOverallCounter;\par
+        NewZData[s] := s + 1;\par
+        l := (s * 1500) + m_nRealTimeCounter;\par
+        NewYData[s] := pGlobalElevData[l] * 0.1;\par
+    end;\par
+\par
+    m_nRealTimeCounter := m_nRealTimeCounter + 1;\par
+    If (m_nRealTimeCounter > 1499) Then\par
+        m_nRealTimeCounter := 0;\par
+\par
+    m_nOverallCounter := m_nOverallCounter + 1;\par
+\par
+    // transfer new Data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDYDATA, @NewYData, 1);\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDXDATA, @NewXData, 1);\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDZDATA, @NewZData, 1);\par
+\par
+    // causes 3D object to reconstruct polygon data //\par
+    PEreconstruct3dpolygons(Pe3do1.hObject)\par
+    Pe3do1.PEactions := ePEactions.tdInvalidateImage;\par
+    \}\par
+\par
+  End\par
+Else If nChart = 411 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{411  3D Scatter, Line, Waterfall Realtime\}\par
+\par
+    //! Use mouse wheel to rotate chart. //\par
+    //! Or click and drag scroll bar thumb tabs to also rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Non-Surface chart, set PolyMode //\par
+    Pe3do1.PolyMode := tdScatter;\par
+\par
+    // Disable Legend //\par
+    Pe3do1.SubsetsToLegend[0] := -1;\par
+\par
+    // Initialize Data //\par
+    Pe3do1.Subsets := 100;\par
+    Pe3do1.Points := 200;\par
+\par
+    For s := 0 To 99 do\par
+    begin\par
+        For p := 0 To 199 do\par
+        begin\par
+            Pe3do1.XData[s, p] := p + 1;\par
+            Pe3do1.YData[s, p] := 0.0;\par
+            Pe3do1.ZData[s, p] := s + 1;\par
+        end;\par
+    end;\par
+\par
+    // Manually scale y axis //\par
+    Pe3do1.ManualScaleControlY := tdManualMinAndMax;\par
+    Pe3do1.ManualMinY := 75;\par
+    Pe3do1.ManualMaxY := 270;\par
+    Pe3do1.AutoMinMaxPadding := 0;\par
+\par
+    // v9 features\par
+    Pe3do1.WaterfallContours := true;\par
+    Pe3do1.ContourColorBlends := 20;\par
+    Pe3do1.ContourColorAlpha := 255;\par
+    Pe3do1.ContourColorSet := eContourColorSet.tdCC_BlueCyanGreenYellowBrownWhite;\par
+\par
+    Pe3do1.ManualContourScaleControl := eManualScaleControl.tdManualMinAndMax;\par
+    Pe3do1.ManualContourMin := 100.0;\par
+    Pe3do1.ManualContourMax := 240.0;\par
+\par
+    // Set Titles //\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.AllowArea := True;\par
+    Pe3do1.AllowPointsPlusLine := True;\par
+    Pe3do1.AllowStylePage := False;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.GridAspectZ := 5.0;\par
+    Pe3do1.GridAspectX := 2.0;\par
+\par
+    Pe3do1.ViewingHeight := 25;\par
+    Pe3do1.DegreeOfRotation := 31;\par
+    Pe3do1.DxZoom := -3.37;\par
+    Pe3do1.DxViewportX := 1.75;\par
+    Pe3do1.DxViewportY := 1.92;\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    Pe3do1.PlottingMethod := td3;  // Area\par
+\par
+    // v9 features\par
+    Pe3do1.WaterfallBorders := true;\par
+    Pe3do1.BarBorderColor := Pe3do1.PEargb(255, 0, 0, 0);\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+    Pe3do1.XZBackColor := Pe3do1.PEargb(255, 0, 0, 0);\par
+    Pe3do1.YBackColor := Pe3do1.PEargb(255, 0, 0, 0);\par
+\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    // Add Some Padding around image //\par
+    Pe3do1.ImageAdjustLeft := 50;\par
+    Pe3do1.ImageAdjustRight := 50;\par
+    Pe3do1.ImageAdjustBottom := 50;\par
+\par
+    Pe3do1.FontSize := tdMedium;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // export defaults //\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    m_nRealTimeCounter := 0;\par
+    m_nOverallCounter := 200;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    Pe3do1.ShowLegendMenu := eMenuControl.tdHideMenu;  \par
+    Pe3do1.ShowWireframeMenu := eMenuControl.tdHideMenu;\par
+\par
+    Timer1.Interval := 15;\par
+    Timer1.Enabled := True;\par
+\par
+    ////////////////////////////////////////////////////////\par
+    // the following code can be found in the Timer Event //\par
+    ////////////////////////////////////////////////////////\par
+    \{\par
+        nBump := 0;\par
+        m_nOverallCounter := m_nOverallCounter + 1;\par
+        m_nRealTimeCounter := m_nRealTimeCounter + 1;\par
+        If (m_nRealTimeCounter > 5) Then\par
+        begin\par
+            nBump := Random(99);\par
+            m_nRealTimeCounter := 0;\par
+        end;\par
+\par
+        For s := 0 To 199 do\par
+        begin\par
+            NewZData[s] := m_nOverallCounter;\par
+            NewXData[s] := s + 1;\par
+            NewYData[s] := 125 + (Random * 9);\par
+            If (nBump <> 0) Then\par
+                NewYData[nBump] := NewYData[nBump] + 0.5;\par
+        end;\par
+\par
+        // transfer data //\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDYSUBSET, @NewYData, 1);\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDXSUBSET, @NewXData, 1);\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDZSUBSET, @NewZData, 1);\par
+\par
+        PEreconstruct3dpolygons(Pe3do1.hObject);\par
+        Pe3do1.PEactions := tdInvalidateImage;\par
+    \}\par
+\par
+  End\par
+Else If nChart = 412 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{412  3D Bar Realtime\}\par
+\par
+    //! Use mouse wheel to rotate chart. //\par
+    //! Or click and drag scroll bar thumb tabs to also rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Non-Surface chart, set PolyMode //\par
+    Pe3do1.PolyMode := tdThreeDBar;\par
+\par
+    // change light location better suited for 3d bar\par
+    Light0.X := -8; Light0.Y := -1.8;  Light0.Z := 6.3;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Define quantity of data //\par
+    Pe3do1.Subsets := 27;\par
+    Pe3do1.Points := 25;\par
+\par
+    // Set all data to start with zero //\par
+    For s := 0 To 26 do\par
+        For p := 0 To 24 do\par
+            Pe3do1.YData[s, p] := 0;\par
+\par
+    // Set initial point labels for x axis //\par
+    For p := 0 To 24 do\par
+        Pe3do1.PointLabels[p] := ' ';\par
+\par
+    // Manually scale y axis //\par
+    Pe3do1.ManualScaleControlY := tdManualMinAndMax;\par
+    Pe3do1.ManualMinY := 0;\par
+    Pe3do1.ManualMaxY := 100;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    // Set Titles //\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.GridAspectZ := 2.0;\par
+    Pe3do1.GridAspectX := 5.0;\par
+\par
+    Pe3do1.ViewingHeight := 29;\par
+    Pe3do1.DegreeOfRotation := 312;\par
+    Pe3do1.DxZoom := -4.57;\par
+    Pe3do1.DxViewportX := 1.8;\par
+    Pe3do1.DxViewportY := 1.8;\par
+    Pe3do1.DegreePrompting := true;\par
+\par
+    // Set Plotting methods //\par
+    Pe3do1.PlottingMethod := td2;\par
+    Pe3do1.AllowWireFrame := False;\par
+    Pe3do1.AllowPlotCustomization := False;\par
+    Pe3do1.AllowStylePage := False;\par
+\par
+    // Add padding around chart //\par
+    Pe3do1.ImageAdjustLeft := 50;\par
+    Pe3do1.ImageAdjustRight := 50;\par
+    Pe3do1.ImageAdjustBottom := 50;\par
+\par
+    // Set Various Other Properties //\par
+    Pe3do1.FontSize := tdMedium;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.BitmapGradientMode := False;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.LabelBold := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // export defaults //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    Timer1.Interval := 15;\par
+    Timer1.Enabled := True;\par
+\par
+    ////////////////////////////////////////////////////////\par
+    // the following code can be found in the Timer Event //\par
+    ////////////////////////////////////////////////////////\par
+    \{\par
+    // new point label //\par
+    CurrentTime := TimeToStr(Time);\par
+    StringToWideChar(CurrentTime, szCurrentTime, 30);\par
+\par
+    // new YData //\par
+    For s := 0 To 26 do\par
+        NewYData[s] := 10 + (Random * 90);\par
+\par
+    // transfer new point label //\par
+    PEvsetW(Pe3do1.hObject, PEP_szaAPPENDPOINTLABELDATA, @szCurrentTime, 1);\par
+\par
+    // transfer new YData //\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDYDATA, @NewYData, 1);\par
+\par
+    // causes 3D object to reconstruct polygon data //\par
+    PEreconstruct3dpolygons(Pe3do1.hObject);\par
+\par
+    Pe3do1.PEactions := ePEactions.tdInvalidateImage;\par
+    \}\par
+\par
+  End\par
+Else If nChart = 413 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{413  2D Line Realtime\}\par
+\par
+    //! Simple 2D line charting via DirectX\par
+    //! Left click and drag to rotate. Also Hold shift to translate. //\par
+    //! Mouse Wheel zooms in/out.\par
+\par
+    // Non-Surface chart, set PolyMode //\par
+    Pe3do1.PolyMode := tdScatter;\par
+\par
+    // Set data size //\par
+    Pe3do1.Subsets := 4;\par
+    Pe3do1.Points := 25000;\par
+\par
+    // Set camera position //\par
+    Pe3do1.ViewingHeight := 1;\par
+    Pe3do1.DegreeOfRotation := 191;\par
+    Pe3do1.DxZoom := 1.5;\par
+    Pe3do1.DxViewportX := -0.18;\par
+    Pe3do1.DxViewportY := 0.01;\par
+\par
+    // Manually scale x axis //\par
+    Pe3do1.ManualScaleControlX := tdManualMinAndMax;\par
+    Pe3do1.ManualMinX := 0;\par
+    Pe3do1.ManualMaxX := 250;\par
+\par
+    // Manually scale y axis //\par
+    Pe3do1.ManualScaleControlY := tdManualMinAndMax;\par
+    Pe3do1.ManualMinY := 0;\par
+    Pe3do1.ManualMaxY := 60;\par
+\par
+    Pe3do1.AutoMinMaxPadding := 0;\par
+\par
+    // Shrink the Z Aspect and show no label\par
+    Pe3do1.GridAspectZ := 0.001;\par
+    Pe3do1.ShowZAxis := eShowAxis.tdEmpty;\par
+    Pe3do1.ZAxisLabel := '';\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // Enable button dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Subset colors //\par
+    Pe3do1.SubsetColors[0] := Pe3do1.PEargb(205, 178, 50, 50);\par
+    Pe3do1.SubsetColors[1] := Pe3do1.PEargb(205, 50, 198, 198);\par
+    Pe3do1.SubsetColors[2] := Pe3do1.PEargb(205, 198, 198, 50);\par
+    Pe3do1.SubsetColors[3] := Pe3do1.PEargb(205, 50, 198, 0);\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    // Set Titles //\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+\par
+    // Set Plotting methods //\par
+    Pe3do1.PlottingMethod := td1;\par
+    Pe3do1.AllowArea := False;\par
+    Pe3do1.AllowPointsPlusLine := False;\par
+    Pe3do1.AllowPoint := False;\par
+    Pe3do1.AllowPlotCustomization := False;\par
+    Pe3do1.SubsetsToLegend[0] := -1;\par
+\par
+    // Set font size //\par
+    Pe3do1.FontSize := tdMedium;\par
+    Pe3do1.FixedFonts := True;\par
+\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.FocalRect := False;\par
+    Pe3do1.CacheBmp := True;\par
+\par
+    // Add Some Padding around image //\par
+    Pe3do1.ImageAdjustLeft := 50;\par
+    Pe3do1.ImageAdjustRight := 50;\par
+    Pe3do1.ImageAdjustBottom := 50;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // export settings //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    m_nRealTimeCounter := 0;\par
+    m_nOverallCounter := 0;\par
+\par
+    Timer1.Interval := 25;\par
+    Timer1.Enabled := True;\par
+\par
+    ////////////////////////////////////////////////////////\par
+    // the following code can be found in the Timer Event //\par
+    ////////////////////////////////////////////////////////\par
+    \{\par
+    // Repass the data, this time with PEvset call //\par
+    Pe3do1.Subsets := 4;\par
+    Pe3do1.Points := 25000;\par
+\par
+    // Prepare data in temp arrays, make sure to use Single (4 byte floats) //\par
+    GetMem(ptx, SizeOf(Single) * 100000);\par
+    GetMem(pty, SizeOf(Single) * 100000);\par
+    GetMem(ptz, SizeOf(Single) * 100000);\par
+\par
+    fShift := Random * 90;\par
+    For j := 0 To 24999 do\par
+    begin\par
+        ptx[j] := ((j + 1)) * 0.01;\par
+        pty[j] := (Sin(0.003 * j + fShift) * 5) + 10 + (Random * 100) / 10;\par
+        ptz[j] := 10;\par
+    end;\par
+    fShift := Random * 90;\par
+    For j := 0 To 24999 do\par
+    begin\par
+        ptx[j + 25000] := ((j + 1)) * 0.01;\par
+        pty[j + 25000] := (Sin(0.002 * j + fShift) * 5) + 20 + (Random * 100) / 10;\par
+        ptz[j + 25000] := 10;\par
+    end;\par
+    fShift := Random * 90;\par
+    For j := 0 To 24999 do\par
+    begin\par
+        ptx[j + 50000] := ((j + 1)) * 0.01;\par
+        pty[j + 50000] := (Sin(0.003 * j + fShift) * 5) + 30 + (Random * 100) / 10;\par
+        ptz[j + 50000] := 10;\par
+    end;\par
+    fShift := Random * 90;\par
+    For j := 0 To 24999 do\par
+    begin\par
+        ptx[j + 75000] := ((j + 1)) * 0.01;\par
+        pty[j + 75000] := (Sin(0.003 * j + fShift) * 5) + 40 + (Random * 100) / 10;\par
+        ptz[j + 75000] := 10;\par
+    end;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, ptx, 100000);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pty, 100000);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, ptz, 100000);\par
+\par
+    FreeMem(ptx, SizeOf(Single) * 100000);\par
+    FreeMem(pty, SizeOf(Single) * 100000);\par
+    FreeMem(ptz, SizeOf(Single) * 100000);\par
+\par
+    // causes 3D object to reconstruct polygon data //\par
+    If Pe3do1.RenderEngine = eRenderEngine.tdDirect3D Then\par
+        PEreconstruct3dpolygons(Pe3do1.hObject)\par
+    Else\par
+        Pe3do1.PEactions := ePEactions.tdResetImage;\par
+\par
+    Pe3do1.PEactions := ePEactions.tdInvalidateImage;\par
+    \}\par
+\par
+\par
+  End\par
+Else If nChart = 499 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{499  \}\par
+\par
+end;\par
+\par
+Pe3do1.PEactions := tdReinitAndReset;\par
+\par
+If (Form6.Visible = False) Then Form6.Show;\par
+\par
+Pe3do1.Invalidate();\par
+Pe3do1.Update();\par
+\par
+End;\par
+\par
+\par
+\{////////////////////////\}\par
+\{create the most basic graph to build on\}\par
+Procedure TForm6.Create3DSimpleWireFrame;\par
+Var\par
+Row: LongInt;\par
+Col: LongInt;\par
+o: LongInt;\par
+nQ: LongInt;\par
+nStartRow: LongInt;\par
+nEndRow: LongInt;\par
+nStartCol: LongInt;\par
+nEndCol: LongInt;\par
+nTargetRows: LongInt;\par
+nTargetCols: LongInt;\par
+pElevData: ^ElevData;\par
+pMyXData: ^MyXDat;\par
+pMyYData: ^MyYDat;\par
+pMyZData: ^MyZDat;\par
+pfile : file;\par
+rowcounter: LongInt;\par
+colcounter: LongInt;\par
+foundtargetindex: Boolean;\par
+nRndRow: Integer;\par
+nRndCol: Integer;\par
+Light0: Point3D;\par
+\par
+  begin\par
+\par
+    nRndRow := Random(300);\par
+    nRndCol := Random(300);\par
+\par
+    nStartRow := nRndRow;\par
+    nEndRow := nRndRow + 200;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+    nStartCol := nRndCol;\par
+    nEndCol := nRndCol + 200;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * (2250000) );\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], (2250000) );\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nQ);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyXData[o] := Col + 1;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                    pMyZData[o] := Row + 1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nQ);\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * 2250000);\par
+    FreeMem(pMyXData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nQ);\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 10;\par
+    Pe3do1.MouseWheelZoomSmoothness := 15;\par
+    Pe3do1.PinchZoomSmoothness := 5;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Set view\par
+    Pe3do1.ViewingHeight := 16;\par
+    Pe3do1.DegreeOfRotation := 245;\par
+\par
+    // Set light location\par
+    Light0.X := 1.5; Light0.Y := -1.5;  Light0.Z := 2.0;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := 0.8;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 225, 225, 225);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 159, 159, 159);\par
+    // Alternately, if the above SubsetColor indices are not assigned.\par
+    // (0) will be wireframe color for wireframe plotting method //\par
+    // (0) will be solid color if plotting method is solid\par
+    // (1) will be wire frame color for solid plotting methods\par
+\par
+    // v9 feature\par
+    Pe3do1.ContourColorSet := eContourColorSet.tdCC_BlueCyanGreenYellowBrownWhite;\par
+    Pe3do1.LegendLocation := eLegendLocation.tdLegendLeft;\par
+    Pe3do1.ContourStyleLegend := true;\par
+    Pe3do1.ContourLegendPrecision := 1;\par
+    Pe3do1.ShowWireFrame := true;\par
+\par
+    // Set the plotting method //\par
+    //! There are different plotting method values for each //\par
+    //! case of PolyMode  //\par
+    Pe3do1.PlottingMethod := ePlottingMethod(0); // wireframe\par
+    Pe3do1.AllowSurfaceContour := True;\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkNoBorder;\par
+\par
+    Pe3do1.FixedFonts := True;\par
+    Pe3do1.FontSize := tdLarge;\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    // default export settings //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    // Enable CursorPromptTracking HighlighColor, etc only applicable to Direct3D RenderEngine\par
+    Pe3do1.AllowDataHotSpots := true;\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.DataPrecision := eDataPrecision.tdTwoDecimals;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+\par
+    Pe3do1.DxFitControlShape := true;\par
+    Pe3do1.ShowContour := eShowContour.tdBottomColors;\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+End;\par
+\par
+\{////////////////////////\}\par
+\{create the most basic graph to build on\}\par
+Procedure TForm6.CreateLargeSurfaceFlattenedFlyBy;\par
+Var\par
+Row: LongInt;\par
+Col: LongInt;\par
+o: LongInt;\par
+nQ: LongInt;\par
+nStartRow: LongInt;\par
+nEndRow: LongInt;\par
+nStartCol: LongInt;\par
+nEndCol: LongInt;\par
+nTargetRows: LongInt;\par
+nTargetCols: LongInt;\par
+pElevData: ^ElevData;\par
+pMyXData: ^MyXDat;\par
+pMyYData: ^MyYDat;\par
+pMyZData: ^MyZDat;\par
+pfile : file;\par
+rowcounter: LongInt;\par
+colcounter: LongInt;\par
+foundtargetindex: Boolean;\par
+Light0: Point3D;\par
+s: LongInt;\par
+aCnt: Integer;\par
+annot: Integer;\par
+p3d: Point3D;\par
+nRndRow: Integer;\par
+nRndCol: Integer;\par
+\par
+begin\par
+\par
+    //! Double Click to start and stop Auto Rotation. //\par
+    //! Click and drag scroll bar thumb tabs to quickly rotate. //\par
+    //! Right button click to show popup menu. //\par
+\par
+    // Enable Gestures //\par
+    Pe3do1.Touch.InteractiveGestures := [igZoom, igPan, igRotate];\par
+    Pe3do1.Touch.InteractiveGestureOptions := [igoPanInertia];\par
+\par
+    // Enable smooth rotating and zooming //\par
+    Pe3do1.ScrollSmoothness := 3;\par
+    Pe3do1.MouseWheelZoomSmoothness := 3;\par
+    Pe3do1.PinchZoomSmoothness := 2;\par
+\par
+    // Hide Axes\par
+    Pe3do1.ShowXAxis := tdEmpty;\par
+    Pe3do1.ShowYAxis := tdEmpty;\par
+    Pe3do1.ShowZAxis := tdEmpty;\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.ViewingHeight := 23;\par
+    Pe3do1.DegreeOfRotation := 44;\par
+\par
+    // Set light location\par
+    Light0.X := 0.2; Light0.Y := -1.75;  Light0.Z := 2.35;\par
+    PEvsetW(Pe3do1.hObject, PEP_struct3DXLIGHT0, @Light0, 1);\par
+\par
+    // Set eye/camera distance, or Zoom amount //\par
+    Pe3do1.DxZoom := -0.37;\par
+\par
+    // Set a chart translation //\par
+    Pe3do1.DxViewportX := -7.8;\par
+    Pe3do1.DxViewportY := 0.8;\par
+\par
+    // Enable mouse dragging //\par
+    Pe3do1.MouseDraggingX := True;\par
+    Pe3do1.MouseDraggingY := True;\par
+\par
+    // Enable DegreePrompting, to view rotation, zoom, light location to aid\par
+    // in determining different default values for such properties //\par
+    Pe3do1.DegreePrompting := True;\par
+\par
+    // Reduce the terrain height with respect to surface area\par
+    Pe3do1.GridAspectX := 10;\par
+    Pe3do1.GridAspectZ := 10;\par
+\par
+    Pe3do1.RotationSpeed := 50;\par
+    Pe3do1.RotationIncrement := tdIncBy1;\par
+\par
+    // Pass Data //\par
+    nStartRow := 0;\par
+    nEndRow := 1000;\par
+    nTargetRows := nEndRow - nStartRow + 1;\par
+    nStartCol := 0;\par
+    nEndCol := 1000;\par
+    nTargetCols := nEndCol - nStartCol + 1;\par
+    nQ := nTargetRows * nTargetCols;\par
+\par
+    GetMem(pElevData, SizeOf(LongInt) * (2250000) );\par
+\par
+    AssignFile(pfile, 'terrain2.bin');\par
+    Reset(pfile, 4);\tab // Record size = 4\par
+    BlockRead(pfile, pElevData[0], (2250000) );\par
+    CloseFile(pfile);\par
+\par
+    GetMem(pMyXData, SizeOf(Single) * nTargetCols);\par
+    GetMem(pMyYData, SizeOf(Single) * nQ);\par
+    GetMem(pMyZData, SizeOf(Single) * nTargetRows);\par
+\par
+    rowcounter := 0;\par
+    colcounter := 0;\par
+\par
+    for Row := 0 To 1499 do\par
+    begin\par
+        for Col := 0 To 1499 do\par
+        begin\par
+            foundtargetindex := false;\par
+\par
+            if (Row >= nStartRow) and (Row <= nEndRow) Then\par
+            begin\par
+                if (Col >= nStartCol) and (Col <= nEndCol) Then\par
+                begin\par
+                    foundtargetindex := TRUE;\par
+                    if (Row = nStartRow) then pMyXData[Col - nStartCol] := Col + 1;  // v9.5\par
+                    if (Col = nStartCol) then pMyZData[Row - nStartRow] := Row + 1;\par
+                    // See our help, topic SubsetByPoint to understand the below formula\par
+                    o := (rowcounter * nTargetRows) + colcounter;\par
+                    pMyYData[o] := pElevData[(Row * 1500) + Col] * 0.1;\par
+                end;\par
+            end;\par
+            if (foundtargetindex) Then\par
+                colcounter := colcounter + 1;\par
+        end;\par
+        if (foundtargetindex) Then\par
+            rowcounter := rowcounter + 1;\par
+    end;\par
+\par
+    Pe3do1.Subsets := nTargetRows;\par
+    Pe3do1.Points := nTargetCols;\par
+\par
+    // Perform the actual transfer of data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faXDATA, pMyXData, nTargetCols);\par
+    PEvsetW(Pe3do1.hObject, PEP_faYDATA, pMyYData, nQ);\par
+    PEvsetW(Pe3do1.hObject, PEP_faZDATA, pMyZData, nTargetRows);\par
+    Pe3do1.DuplicateDataX := eDuplicateData.tdPointIncrement;\par
+    Pe3do1.DuplicateDataZ := eDuplicateData.tdSubsetIncrement;\par
+\par
+    FreeMem(pElevData, SizeOf(Single) * (2250000));\par
+    FreeMem(pMyXData, SizeOf(Single) * nTargetCols);\par
+    FreeMem(pMyYData, SizeOf(Single) * nQ);\par
+    FreeMem(pMyZData, SizeOf(Single) * nTargetRows);\par
+\par
+    Pe3do1.ContourStyleLegend := True;\par
+    Pe3do1.LegendLocation := tdLegendRight;\par
+    Pe3do1.LegendLocationMenu := tdShowMenu;\par
+    Pe3do1.ContourLegendPrecision := 1;\par
+\par
+    // Set Contour Color regions //\par
+    Pe3do1.SubsetColors[-1] := 0; // clears items\par
+    for s := 0 To 31 do\par
+    begin\par
+        Pe3do1.SubsetColors[s] := Pe3do1.PEargb(255, 0, 31 + (s * 7), 95 + (s * 5));\par
+        Pe3do1.SubsetColors[s + 32] := Pe3do1.PEargb(255, 0, 95 + (s * 5), 0);\par
+    end;\par
+    for s := 0 To 35 do\par
+        Pe3do1.SubsetColors[s + 64] := Pe3do1.PEargb(255, 128 + (s * 3), 128 + (s * 3), 128 + (s * 3));\par
+\par
+    // For when ViewingStyle is monochrome //\par
+    for s := 0 To 99 do\par
+        Pe3do1.SubsetShades[s] := Pe3do1.PEargb(255, 50 + (s * 2), 50 + (s * 2), 50 + (s * 2));\par
+\par
+    Pe3do1.ShowLegend := True;\par
+    Pe3do1.LegendLocationMenu := tdShowMenu;\par
+\par
+    Pe3do1.SubsetColors[WIRE_FRAME_COLOR] := Pe3do1.PEargb(255, 80, 80, 80);\par
+    Pe3do1.SubsetColors[SOLID_SURFACE_COLOR] := Pe3do1.PEargb(255, 148, 148, 148);\par
+\par
+    Pe3do1.RenderEngine := tdDirect3D;\par
+\par
+    Pe3do1.MainTitle := '';\par
+    Pe3do1.SubTitle := '||Mouse Wheel zooms. Mouse Drag rotates. Mouse Drag+SHIFT shifts image. ';\par
+    Pe3do1.MultiSubTitles[0] := '||Double Click start/stop Rotation. Mouse Drag+MIDDLE rotates light. ';\par
+\par
+    Pe3do1.BitmapGradientMode := True;\par
+    Pe3do1.QuickStyle := tdDarkLine;\par
+    Pe3do1.BorderTypes := tdNoBorder;\par
+\par
+    Pe3do1.FixedFonts := True;\par
+    Pe3do1.FontSize := tdLarge;\par
+    Pe3do1.PrepareImages := True;\par
+    Pe3do1.CacheBmp := True;\par
+    Pe3do1.FocalRect := False;\par
+\par
+    Pe3do1.ImageAdjustLeft := 0;\par
+    Pe3do1.ImageAdjustRight := 0;\par
+    Pe3do1.ImageAdjustBottom := 0;\par
+\par
+    Pe3do1.TextShadows := tdShadowBoldText;\par
+    Pe3do1.LabelBold := True;\par
+\par
+    Pe3do1.PlottingMethod := td4;\par
+    Pe3do1.AllowWireFrame := False;\par
+\par
+    // default export setting //\par
+    Pe3do1.DpiX := 600;\par
+    Pe3do1.DpiY := 600;\par
+\par
+    Pe3do1.ExportSizeDef := tdExportNoSizeOrPixels;\par
+    Pe3do1.ExportTypeDef := tdExportPng;\par
+    Pe3do1.ExportDestDef := tdExportToClipboard;\par
+    Pe3do1.ExportUnitXDef := '1280';\par
+    Pe3do1.ExportUnitYDef := '768';\par
+    Pe3do1.ExportImageDpi := 300;\par
+    Pe3do1.AllowTextExport := False;\par
+    Pe3do1.AllowEmfExport := false;\par
+    Pe3do1.AllowWmfExport := false;\par
+    Pe3do1.AllowSvgExport := false;\par
+\par
+    Pe3do1.AntiAliasGraphics := True;\par
+    Pe3do1.AntiAliasText := True;\par
+\par
+    // Enable CursorPromptTracking HighlighColor, etc only applicable to Direct3D RenderEngine\par
+    Pe3do1.CursorPromptTracking := true;\par
+    Pe3do1.CursorPromptStyle := eCursorPromptStyle.tdYValue;\par
+    Pe3do1.HighlightColor := Pe3do1.PEargb(255, 255, 0, 0);\par
+    Pe3do1.AllowDataHotSpots := false;\par
+    Pe3do1.DataShadowMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ContourMenu := eMenuControl.tdHideMenu;\par
+\par
+\par
+    Pe3do1.AllowAnnotationControl := true;\par
+    Pe3do1.ShowAnnotationsMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.AnnotationTextFixedSizeMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.ShowAnnotationTextMenu := eMenuControl.tdShowMenu;\par
+    Pe3do1.DxFitControlShape := false;\par
+\par
+    // Add some random graph annotations //  // v9.5\par
+    aCnt := 0;\par
+    for annot := 0 to 19 do\par
+    begin\par
+        nRndRow := Random(1000);\par
+        nRndCol := Random(1000);\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_LARGEDOTSOLID;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '';\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,200,0,0);\par
+        aCnt := aCnt + 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := nStartCol + nRndCol + 1;\par
+        Pe3do1.GraphAnnotationZ[aCnt] := nStartRow + nRndRow + 1;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nRndRow, nRndCol];\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_POINTER;\par
+        Pe3do1.GraphAnnotationText[aCnt] := '|lAnnotation ' + IntToStr(annot);\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255,255,255,255);\par
+        aCnt := aCnt + 1;\par
+    end;\par
+\par
+    Pe3do1.ShowAnnotations := true;\par
+    Pe3do1.ShowGraphAnnotations := true;\par
+    Pe3do1.LeftJustificationOutside := true;\par
+    Pe3do1.GraphAnnotationSymbolObstacles := true;\par
+    Pe3do1.GraphAnnotationTextSize := 110;\par
+    Pe3do1.AllowGraphAnnotHotSpots := false;\par
+    Pe3do1.AnnotationsInFront := false;\par
+\par
+    Pe3do1.CustomMenuText[0] := 'Zoom Rotate on Center ';\par
+    Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+    Pe3do1.CustomMenuLocation[0] := eCustomMenuLocation.tdAboveSeparator;\par
+    Pe3do1.MultiSubTitles[1] := 'Key 0-9 rotates/zooms at annotation| |Popup Menu size/hide annotation text.';\par
+\par
+    // Set a default ViewingAt location.\par
+    p3d.X := Pe3do1.GraphAnnotationX[0];\par
+    p3d.Y := Pe3do1.GraphAnnotationY[0];\par
+    p3d.Z := Pe3do1.GraphAnnotationZ[0];\par
+    PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+\par
+    // At end of Direct3D initializations, don't forget\par
+    Pe3do1.Force3dxAnnotVerticeRebuild := True;\par
+    Pe3do1.Force3dxVerticeRebuild := True;\par
+\par
+\par
+\par
+\par
+end;\par
+\par
+procedure TForm6.FormResize(Sender: TObject);\par
+begin\par
+\par
+Pe3do1.left := 0;\par
+Pe3do1.top := 0;\par
+Pe3do1.Width := Form6.ClientWidth;\par
+Pe3do1.Height := Form6.ClientHeight;\par
+\par
+end;\par
+\par
+procedure TForm6.FormShow(Sender: TObject);\par
+begin\par
+\par
+Form6.left := 0;\par
+Form6.top := trunc(Screen.Height / 3);\par
+\par
+if (Screen.Width > 1920) then\par
+  Form6.Width := 1920\par
+else\par
+  Form6.Width := Screen.Width;\par
+\par
+Form6.Height := trunc(Screen.Height * 1.9 / 3);\par
+\par
+CreateAllCharts;\par
+\par
+end;\par
+\par
+procedure TForm6.Pe3do1CustomMenu(Sender: TObject; MenuIndex, SubmenuIndex: Integer);\par
+var\par
+n: eCustomMenuState;\par
+sz: String;\par
+nChart: Integer;\par
+begin\par
+  sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+  sz := Copy(sz,1,3);\par
+  nChart := StrToInt(sz);\par
+\par
+  if (MenuIndex = 0) then\par
+  begin\par
+    // Reverse option //\par
+    n := Pe3do1.CustomMenuState[0,0];\par
+    if (n = eCustomMenuState.tdUnchecked) then\par
+    begin\par
+      n := eCustomMenuState.tdChecked;\par
+      Pe3do1.ViewingMode := eViewingMode.tdCenter;\par
+      if (nChart = 400) or (nChart = 404) then Pe3do1.DxZoom := -2.0\par
+      else if (nChart = 402) then Pe3do1.DxZoom := -1.0;\par
+    end\par
+    else\par
+    begin\par
+      n := eCustomMenuState.tdUnchecked;\par
+      Pe3do1.ViewingMode := eViewingMode.tdDataLocation;\par
+    end;\par
+    Pe3do1.CustomMenuState[0,0] := n;\par
+    Pe3do1.Invalidate();\par
+  end;\par
+end;\par
+\par
+procedure TForm6.Pe3do1CustomTrackingDataText(Sender: TObject);\par
+var\par
+sz: String;\par
+nChart: Integer;\par
+pt : TPOINT;\par
+hsd : THotSpotData;\par
+s : WideString;\par
+s2 : WideString;\par
+dY: Double;\par
+begin\par
+  sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+  sz := Copy(sz,1,3);\par
+  nChart := StrToInt(sz);\par
+\par
+  if (nChart = 402) then\par
+  begin\par
+    dY := Pe3do1.CursorValueY;\par
+    Pe3do1.TrackingText := 'Surface with Plateaus: ' + Chr(10) + FormatFloat('#.00', dY);\par
+  end;\par
+\par
+  if (nChart = 403) then\par
+  begin\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.YData[hsd.w1, hsd.w2]);\par
+        s2 := 'Surface data' + Chr(10) + 'Y= ' + s;\par
+        s := FormatFloat('#.', hsd.w1 );\par
+        s2 := s2 + ' Subset ' + s;\par
+        s := FormatFloat('#.', hsd.w2 );\par
+        s2 := s2 + ' Point ' + s;\par
+    end;\par
+    Pe3do1.TrackingText := s2;\par
+  end;\par
+\par
+end;\par
+\par
+procedure TForm6.Pe3do1CustomTrackingOtherText(Sender: TObject);\par
+var\par
+sz: String;\par
+nChart: Integer;\par
+pt : TPOINT;\par
+hsd : THotSpotData;\par
+s : WideString;\par
+s2 : WideString;\par
+begin\par
+  sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+  sz := Copy(sz,1,3);\par
+  nChart := StrToInt(sz);\par
+\par
+  if (nChart = 403) and (Pe3do1.ShowAnnotations) then\par
+  begin\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_ANNOTATION) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.GraphAnnotationX[hsd.w1]);\par
+        s2 := 'Well data' + Chr(10) + 'X= ' + s + Chr(10);\par
+        s := FormatFloat('#.00', Pe3do1.GraphAnnotationZ[hsd.w1] );\par
+        s2 := s2 + ' Z=  ' + s + Chr(10);\par
+        s := FormatFloat('#.00', Pe3do1.GraphAnnotationY[hsd.w1] );\par
+        s2 := s2 + ' Y= ' + s;\par
+    end;\par
+    Pe3do1.TrackingText := s2;\par
+  end;\par
+\par
+end;\par
+\par
+procedure TForm6.Pe3do1DataHotSpot(Sender: TObject; DblClick, SubsetIndex,  PointIndex: Integer);\par
+var\par
+sz: String;\par
+nChart: Integer;\par
+pt : TPOINT;\par
+hsd : THotSpotData;\par
+s : WideString;\par
+s2 : WideString;\par
+  begin\par
+  sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+  sz := Copy(sz,1,3);\par
+  nChart := StrToInt(sz);\par
+\par
+  if nChart = 402 Then\par
+  begin\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.CursorValueY );\par
+        s2 := 'Value under mouse ' + s;\par
+        s := FormatFloat('#.', hsd.w1 );\par
+        s2 := s2 + ' Subset ' + s;\par
+        s := FormatFloat('#.', hsd.w2 );\par
+        s2 := s2 + ' Point ' + s;\par
+        Form6.Caption := s2;\par
+    end\par
+  end\par
+end;\par
+\par
+\par
+procedure TForm6.Pe3do1KeyPress(Sender: TObject; var Key: Char);\par
+var\par
+sz: String;\par
+nChart: Integer;\par
+nAnnotation: Integer;\par
+p3d: Point3D;\par
+  begin\par
+  sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+  sz := Copy(sz,1,3);\par
+  nChart := StrToInt(sz);\par
+\par
+  If (nChart = 400) or (nChart = 401) or (nChart = 402) or (nChart = 403) or (nChart = 404) or (nChart = 408) Then\par
+  begin\par
+    If ((ord(Key) >= 48) and (ord(Key) <= 57)) Then\par
+    begin\par
+      nAnnotation := ord(Key) - 48;\par
+      if (Pe3do1.ViewingMode <> eViewingMode.tdDataLocation) then\par
+      begin\par
+        p3d.X := Pe3do1.GraphAnnotationX[m_nAnnotationStartIndices[nAnnotation]];\par
+        p3d.Y := Pe3do1.GraphAnnotationY[m_nAnnotationStartIndices[nAnnotation]];\par
+        p3d.Z := Pe3do1.GraphAnnotationZ[m_nAnnotationStartIndices[nAnnotation]];\par
+        PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+        Pe3do1.ViewingMode := eViewingMode.tdDataLocation;\par
+        Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdUnchecked;\par
+        m_nCurrentAnnotation := nAnnotation;\par
+        if (nChart = 403) then\par
+        begin\par
+          if (Pe3do1.AutoRotation) then Pe3do1.AutoRotation := false;\par
+          Pe3do1.AllowRotation := false;\par
+          if (nAnnotation < 3) then Pe3do1.ViewingHeight := 85;\par
+          Pe3do1.DxZoom := 2.4;\par
+          m_nAnimationViewIndex := 0;\par
+          Timer1.Interval := 25;\par
+          Timer1.Enabled := true;\par
+        end\par
+        else if (nChart = 401) then Pe3do1.DxZoom := -0.4\par
+        else if (nChart = 404) then Pe3do1.DxZoom := 16.0\par
+        else Pe3do1.DxZoom := 1.5;\par
+      end\par
+      else\par
+      begin\par
+        if (m_nCurrentAnnotation = nAnnotation) then\par
+        begin\par
+          Pe3do1.HighLightGraphAnnotationIndex := -1;\par
+          Timer1.Enabled := false;\par
+          // switch back to Center mode\par
+          m_nAnimationViewIndex := 0;\par
+          Pe3do1.ViewingMode := eViewingMode.tdCenter;\par
+          Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdChecked;\par
+          if (nChart = 400) then Pe3do1.DxZoom := -1.5\par
+          else if (nChart = 401) then Pe3do1.DxZoom := -0.4\par
+          else if (nChart = 404) then Pe3do1.DxZoom := -2.0\par
+          else Pe3do1.DxZoom := 0.2;\par
+        end\par
+        else\par
+        begin\par
+          // change the focus location\par
+          p3d.X := Pe3do1.GraphAnnotationX[m_nAnnotationStartIndices[nAnnotation]];\par
+          p3d.Y := Pe3do1.GraphAnnotationY[m_nAnnotationStartIndices[nAnnotation]];\par
+          p3d.Z := Pe3do1.GraphAnnotationZ[m_nAnnotationStartIndices[nAnnotation]];\par
+          PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+          Pe3do1.ViewingMode := eViewingMode.tdDataLocation;\par
+          Pe3do1.CustomMenuState[0, 0] := eCustomMenuState.tdUnchecked;\par
+          m_nCurrentAnnotation := nAnnotation;\par
+          if (nChart = 403) then\par
+          begin\par
+            if (Pe3do1.AutoRotation) then Pe3do1.AutoRotation := false;\par
+            Pe3do1.AllowRotation := false;\par
+            m_nAnimationViewIndex := 0;\par
+            Timer1.Interval := 25;\par
+            Timer1.Enabled := true;\par
+          end;\par
+        end;\par
+      end;\par
+      Pe3do1.Invalidate();\par
+    end;\par
+  end;\par
+end;\par
+\par
+\par
+procedure TForm6.Pe3do1MouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);\par
+var\par
+sz: String;\par
+nChart: Integer;\par
+pt : TPOINT;\par
+hsd : THotSpotData;\par
+s : WideString;\par
+s2 : WideString;\par
+fOffsetHeight : Single;\par
+nHighLightSubset: Integer;\par
+aCnt: Integer;\par
+p: Integer;\par
+  begin\par
+  sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+  sz := Copy(sz,1,3);\par
+  nChart := StrToInt(sz);\par
+\par
+  // v9.5\par
+  if (Pe3do1.ShowAnnotations = true) and ((nChart = 400) or (nChart = 407)) then\par
+  begin\par
+    fOffsetHeight := 0;\par
+    if (nChart = 400) then fOffsetHeight := 3;\par
+\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+      // Add a Polygon Graph Annotation to highlight a slice\par
+      nHighLightSubset :=  hsd.w1;\par
+      aCnt := 50; // just an offset or buffer as we are placing point annotations at annotation index 0\par
+      p := 0;\par
+      Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+      Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] - 0.05;\par
+      Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nHighLightSubset, p] + fOffsetHeight;\par
+      Pe3do1.GraphAnnotationType[aCnt] := PEGAT_STARTPOLY;\par
+      aCnt := aCnt + 1;\par
+      for p := 1 to Pe3do1.Points - 1 do\par
+      begin\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] - 0.05;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nHighLightSubset, p] + fOffsetHeight;\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+        aCnt := aCnt + 1;\par
+      end;\par
+      p := Pe3do1.Points - 1;\par
+      Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+      Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] - 0.05;\par
+      Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.ManualMinY;\par
+      Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+      aCnt := aCnt + 1;\par
+\par
+      Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, 0];  // back to point 0\par
+      Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, 0] - 0.05;\par
+      Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.ManualMinY;\par
+      Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ENDPOLYGON;\par
+      Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+      aCnt := aCnt + 1;\par
+\par
+      Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+      Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] - 0.05;\par
+      Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.ManualMinY;\par
+      Pe3do1.GraphAnnotationType[aCnt] := PEGAT_NOSYMBOL;\par
+      Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255);\par
+      Pe3do1.GraphAnnotationText[aCnt] := FormatFloat('#', Pe3do1.ZData[nHighLightSubset, p] );\par
+      aCnt := aCnt + 1;\par
+\par
+      Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, 0]; // back to point 0\par
+      Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, 0] - 0.05;\par
+      Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.ManualMinY;\par
+      Pe3do1.GraphAnnotationType[aCnt] := PEGAT_NOSYMBOL;\par
+      Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 255, 255);\par
+      Pe3do1.GraphAnnotationText[aCnt] := FormatFloat('#', Pe3do1.ZData[nHighLightSubset, p] );\par
+      aCnt := aCnt + 1;\par
+\par
+     // Adding a second Polygon Graph Annotation to highlight a slice from other side\par
+     if (nChart = 407) then\par
+     begin\par
+        p := 0;\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] + 0.05;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nHighLightSubset, p] + fOffsetHeight;\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_STARTPOLY;\par
+        aCnt := aCnt + 1;\par
+        for p := 1 to Pe3do1.Points - 1 do\par
+        begin\par
+           Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+           Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] + 0.05;\par
+           Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.YData[nHighLightSubset, p] + fOffsetHeight;\par
+           Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+           aCnt := aCnt + 1;\par
+        end;\par
+        p := Pe3do1.Points - 1;\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, p];\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, p] + 0.05;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.ManualMinY;\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ADDPOLYPOINT;\par
+        aCnt := aCnt + 1;\par
+\par
+        Pe3do1.GraphAnnotationX[aCnt] := Pe3do1.XData[nHighLightSubset, 0];  // back to point 0\par
+        Pe3do1.GraphAnnotationZ[aCnt] := Pe3do1.ZData[nHighLightSubset, 0] + 0.05;\par
+        Pe3do1.GraphAnnotationY[aCnt] := Pe3do1.ManualMinY;\par
+        Pe3do1.GraphAnnotationType[aCnt] := PEGAT_ENDPOLYGON;\par
+        Pe3do1.GraphAnnotationColor[aCnt] := Pe3do1.PEargb(255, 255, 0, 0);\par
+        aCnt := aCnt + 1;\par
+      end;\par
+\par
+      Pe3do1.GraphAnnotationText[aCnt] := ''; // set last annotation text string else virtual labels show\par
+      Pe3do1.Force3dxAnnotVerticeRebuild := true;\par
+      Pe3do1.Invalidate();\par
+\par
+    end;\par
+  end;\par
+\par
+  if (nChart = 403) or (nChart = 404) Then\par
+  begin\par
+    // get last mouse location within control //\par
+    PEvgetW(Pe3do1.hObject, PEP_ptLASTMOUSEMOVE, @pt);\par
+\par
+    // Call PEgethotspot //\par
+    PEgethotspot(Pe3do1.hObject, pt.x, pt.y);\par
+\par
+    // Now look at HotSpotData structure //\par
+    PEvgetW(Pe3do1.hObject, PEP_structHOTSPOTDATA, @hsd);\par
+\par
+    if (hsd.nHotSpotType = PEHS_DATAPOINT) Then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.CursorValueY );\par
+        s2 := 'Value under mouse ' + s;\par
+        s := FormatFloat('#.', hsd.w1 );\par
+        s2 := s2 + ' Subset ' + s;\par
+        s := FormatFloat('#.', hsd.w2 );\par
+        s2 := s2 + ' Point ' + s;\par
+        Form6.Caption := s2;\par
+    end\par
+    else if (nChart = 403) and (hsd.nHotSpotType = PEHS_ANNOTATION) and(Pe3do1.ShowAnnotations) then\par
+    begin\par
+        s := FormatFloat('#.00', Pe3do1.GraphAnnotationX[hsd.w1] );\par
+        s2 := 'Well values X= ' + s;\par
+        s := FormatFloat('#.00', Pe3do1.GraphAnnotationZ[hsd.w1] );\par
+        s2 := s2 + ' Z= ' + s;\par
+        s := FormatFloat('#.00', Pe3do1.GraphAnnotationY[hsd.w1] );\par
+        s2 := s2 + ' Y= ' + s;\par
+        Form6.Caption := s2;\par
+    end\par
+\par
+  end\par
+\par
+end;\par
+\par
+procedure TForm6.Timer1Timer(Sender: TObject);\par
+var\par
+sz: String;\par
+nChart: Integer;\par
+l: Integer;\par
+s: Integer;\par
+NewXData : Array[0..200] of Single;\par
+NewYData : Array[0..200] of Single;\par
+NewZData : Array[0..200] of Single;\par
+nBump: Integer;\par
+CurrentTime : WideString;\par
+szCurrentTime: array[0..48] of WideChar;\par
+ptx: ^MyXData;\par
+pty: ^MyYData;\par
+ptz: ^MyZData;\par
+fShift: Single;\par
+j: Integer;\par
+p3d: Point3D;\par
+\par
+label finish;\par
+\par
+begin\par
+\par
+\{check to see if a list item has been selected\}\par
+if form1.list1.ItemIndex < 0 then goto finish;\par
+\{pull the 3 digit number out of the index and convert it to an integer\}\par
+sz := form1.list1.items.strings[form1.list1.ItemIndex];\par
+sz := Copy(sz,1,3);\par
+nChart := StrToInt(sz);\par
+\par
+\par
+If nChart = 403 Then  // v9.5\par
+  Begin\par
+  m_nAnimationViewIndex := m_nAnimationViewIndex + 1;\par
+\par
+  if (m_nAnimationViewIndex + m_nAnnotationStartIndices[m_nCurrentAnnotation] >= m_nAnnotationStartIndices[m_nCurrentAnnotation + 1]) Then\par
+  Begin\par
+    Timer1.Enabled := false;\par
+    Pe3do1.AllowRotation := true;\par
+    m_nCurrentAnnotation := -1;\par
+    Exit;\par
+  End;\par
+  p3d.X := Pe3do1.GraphAnnotationX[m_nAnnotationStartIndices[m_nCurrentAnnotation] + m_nAnimationViewIndex];\par
+  p3d.Y := Pe3do1.GraphAnnotationY[m_nAnnotationStartIndices[m_nCurrentAnnotation] + m_nAnimationViewIndex];\par
+  p3d.Z := Pe3do1.GraphAnnotationZ[m_nAnnotationStartIndices[m_nCurrentAnnotation] + m_nAnimationViewIndex];\par
+  PEvsetW(Pe3do1.hObject, PEP_structVIEWINGAT, @p3d, 1);\par
+  Pe3do1.HighLightGraphAnnotationIndex := m_nAnnotationStartIndices[m_nCurrentAnnotation] + m_nAnimationViewIndex;\par
+  Pe3do1.DegreeOfRotation := Pe3do1.DegreeOfRotation + 1;\par
+  PEreinitialize(Pe3do1.hObject);\par
+  PEresetimage(Pe3do1.hObject, 0, 0);\par
+  Pe3do1.Invalidate();\par
+  End\par
+Else If nChart = 410 Then\par
+  Begin\par
+\par
+    If (pGlobalElevData = Nil) Then Exit;\par
+\par
+    For s := 0 To 149 do\par
+    begin\par
+        NewXData[s] := m_nOverallCounter;\par
+        NewZData[s] := s + 1;\par
+        l := (s * 1500) + m_nRealTimeCounter;\par
+        NewYData[s] := pGlobalElevData[l] * 0.1;\par
+    end;\par
+\par
+    m_nRealTimeCounter := m_nRealTimeCounter + 1;\par
+    If (m_nRealTimeCounter > 1499) Then\par
+        m_nRealTimeCounter := 0;\par
+\par
+    m_nOverallCounter := m_nOverallCounter + 1;\par
+\par
+    // transfer new Data //\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDYDATA, @NewYData, 1);\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDXDATA, @NewXData, 1);\par
+    PEvsetW(Pe3do1.hObject, PEP_faAPPENDZDATA, @NewZData, 1);\par
+\par
+    // causes 3D object to reconstruct polygon data //\par
+    If Pe3do1.RenderEngine = tdDirect3D Then\par
+        PEreconstruct3dpolygons(Pe3do1.hObject)\par
+    Else\par
+    begin\par
+        PEreconstruct3dpolygons(Pe3do1.hObject);\par
+        PEresetimage(Pe3do1.hObject, 0, 0);\par
+    end;\par
+    Pe3do1.PEactions := tdInvalidateImage;\par
+\par
+  End\par
+Else If nChart = 411 Then\par
+  Begin\par
+        nBump := 0;\par
+        m_nOverallCounter := m_nOverallCounter + 1;\par
+        m_nRealTimeCounter := m_nRealTimeCounter + 1;\par
+        If (m_nRealTimeCounter > 5) Then\par
+        begin\par
+            nBump := Random(99);\par
+            m_nRealTimeCounter := 0;\par
+        end;\par
+\par
+        For s := 0 To 199 do\par
+        begin\par
+            NewZData[s] := m_nOverallCounter;\par
+            NewXData[s] := s + 1;\par
+            NewYData[s] := 125 + (Random * 9);\par
+            If (nBump <> 0) Then\par
+                NewYData[nBump] := NewYData[nBump] + 0.5;\par
+        end;\par
+\par
+        // transfer data //\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDYSUBSET, @NewYData, 1);\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDXSUBSET, @NewXData, 1);\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDZSUBSET, @NewZData, 1);\par
+\par
+        \{\par
+        // comment out above and use this section will update per point vs per subset\par
+        For s := 0 To 99 do\par
+        begin\par
+            NewXData[s] := m_nOverallCounter;\par
+            NewZData[s] := s + 1;\par
+            NewYData[s] := 125 + (Random * 9);\par
+            If (nBump <> 0) Then\par
+                NewYData[nBump] := NewYData[nBump] + (Random * 5);\par
+        end;\par
+\par
+        // transfer data //\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDYDATA, @NewYData, 1);\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDXDATA, @NewXData, 1);\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDZDATA, @NewZData, 1);\par
+        \}\par
+\par
+\par
+        PEreconstruct3dpolygons(Pe3do1.hObject);\par
+        Pe3do1.PEactions := tdInvalidateImage;\par
+\par
+  End\par
+Else If nChart = 412 Then\par
+  Begin\par
+\par
+        // new point label //\par
+        CurrentTime := TimeToStr(Time);\par
+        StringToWideChar(CurrentTime, szCurrentTime, 30);\par
+\par
+        // new YData //\par
+        For s := 0 To 26 do\par
+            NewYData[s] := 10 + (Random * 90);\par
+\par
+        // transfer new point label //\par
+        PEvsetW(Pe3do1.hObject, PEP_szaAPPENDPOINTLABELDATA, @szCurrentTime, 1);\par
+\par
+        // transfer new YData //\par
+        PEvsetW(Pe3do1.hObject, PEP_faAPPENDYDATA, @NewYData, 1);\par
+\par
+        // causes 3D object to reconstruct polygon data //\par
+        PEreconstruct3dpolygons(Pe3do1.hObject);\par
+\par
+        If Pe3do1.RenderEngine <> tdDirect3D Then\par
+            Pe3do1.PEactions := tdResetImage;\par
+\par
+        Pe3do1.PEactions := tdInvalidateImage;\par
+\par
+\par
+    End\par
+Else If nChart = 413 Then\par
+  Begin\par
+\par
+        // Repass the data, this time with PEvset call //\par
+        Pe3do1.Subsets := 4;\par
+        Pe3do1.Points := 25000;\par
+\par
+        // Prepare data in temp arrays, make sure to use Single (4 byte floats) //\par
+        GetMem(ptx, SizeOf(Single) * 100000);\par
+        GetMem(pty, SizeOf(Single) * 100000);\par
+        GetMem(ptz, SizeOf(Single) * 100000);\par
+\par
+        fShift := Random * 90;\par
+        For j := 0 To 24999 do\par
+        begin\par
+            ptx[j] := ((j + 1)) * 0.01;\par
+            pty[j] := (Sin(0.003 * j + fShift) * 5) + 10 + (Random * 100) / 10;\par
+            ptz[j] := 10;\par
+        end;\par
+\par
+        fShift := Random * 90;\par
+        For j := 0 To 24999 do\par
+        begin\par
+            ptx[j + 25000] := ((j + 1)) * 0.01;\par
+            pty[j + 25000] := (Sin(0.002 * j + fShift) * 5) + 20 + (Random * 100) / 10;\par
+            ptz[j + 25000] := 10;\par
+        end;\par
+\par
+        fShift := Random * 90;\par
+        For j := 0 To 24999 do\par
+        begin\par
+            ptx[j + 50000] := ((j + 1)) * 0.01;\par
+            pty[j + 50000] := (Sin(0.003 * j + fShift) * 5) + 30 + (Random * 100) / 10;\par
+            ptz[j + 50000] := 10;\par
+        end;\par
+\par
+        fShift := Random * 90;\par
+        For j := 0 To 24999 do\par
+        begin\par
+            ptx[j + 75000] := ((j + 1)) * 0.01;\par
+            pty[j + 75000] := (Sin(0.003 * j + fShift) * 5) + 40 + (Random * 100) / 10;\par
+            ptz[j + 75000] := 10;\par
+        end;\par
+\par
+        // Perform the actual transfer of data //\par
+        PEvsetW(Pe3do1.hObject, PEP_faXDATA, ptx, 100000);\par
+        PEvsetW(Pe3do1.hObject, PEP_faYDATA, pty, 100000);\par
+        PEvsetW(Pe3do1.hObject, PEP_faZDATA, ptz, 100000);\par
+\par
+        FreeMem(ptx, SizeOf(Single) * 100000);\par
+        FreeMem(pty, SizeOf(Single) * 100000);\par
+        FreeMem(ptz, SizeOf(Single) * 100000);\par
+\par
+        // causes 3D object to reconstruct polygon data //\par
+        If Pe3do1.RenderEngine = tdDirect3D Then\par
+            PEreconstruct3dpolygons(Pe3do1.hObject)\par
+        Else\par
+            Pe3do1.PEactions := tdResetImage;\par
+\par
+        Pe3do1.PEactions := tdInvalidateImage;\par
+\par
+end;\par
+finish:\par
+\par
+end;\par
+\par
+end.\par
+\par
+\par
+\par
+}
+ 

@@ -1,0 +1,429 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\f0\fs22\lang1033 unit Unit5;\par
+\par
+interface\par
+\par
+uses\par
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,\par
+  Pepcvcl, Pegrpapi;\par
+\par
+type\par
+  TForm5 = class(TForm)\par
+    Pepco1: PEPieChart;\par
+    procedure FormResize(Sender: TObject);\par
+    Procedure CreateAllCharts;\par
+    Procedure CreateSimplePie;\par
+    procedure FormShow(Sender: TObject);\par
+  private\par
+    \{ Private declarations \}\par
+  public\par
+    \{ Public declarations \}\par
+  end;\par
+\par
+var\par
+  Form5: TForm5;\par
+\par
+implementation\par
+\par
+uses Unit1, Unit2, Unit3, Unit4, Unit6;\par
+\par
+\{$R *.DFM\}\par
+\par
+\{/////////////////////////////////////////\}\par
+\{create all of the charts that can be used on this form\}\par
+Procedure TForm5.CreateAllCharts;\par
+Var\par
+   nChart : Integer;\par
+   t : String;\par
+   s : Integer;\par
+   p : Integer;\par
+Begin\par
+\par
+\{check to see if a list item has been selected\}\par
+if form1.list1.ItemIndex < 0 then exit;\par
+\{pull the 3 digit number out of the index and convert it to an integer\}\par
+t := form1.list1.items.strings[form1.list1.ItemIndex];\par
+t:=Copy(t,1,3);\par
+nChart := StrToInt(t);\par
+\par
+Pepco1.PEactions := pcReset;\par
+Pepco1.PrepareImages := True;\par
+\par
+If nChart = 300 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{300  *** Simple Pie Chart ***\}\par
+\par
+    //! Size this control and use the vertical scrollbar to\par
+    //! quickly see multiple variations.  Note we've added a zero data point for the first subset.  This demonstrates\par
+    //! how ProEssentials automatically annotates zero slices and controls which slices are included in the "*Other"\par
+    //! slice grouping.  Sizing to a small square stresses our text positioning logic that demonstrates three\par
+    //! algorithms attempting to prevent text from overlapping.\par
+\par
+    //! Double click slice label to explode. //\par
+\par
+    // Example showing a simple Pie Chart construction //\par
+    Pepco1.Subsets := 5;\par
+    Pepco1.Points := 12;\par
+\par
+    // Pass data for slices //\par
+    for s := 0 To 4 do\par
+        for p := 0 To 11 do\par
+            Pepco1.XData[s, p] := (Random * 5) + (Random * 100) / 100.0;\par
+    Pepco1.XData[0, 3] := 0.0;\par
+\par
+    // Set Subset labels //\par
+    Pepco1.SubsetLabels[0] := 'Apples';\par
+    Pepco1.SubsetLabels[1] := 'Oranges';\par
+    Pepco1.SubsetLabels[2] := 'Pears';\par
+    Pepco1.SubsetLabels[3] := 'Plums';\par
+    Pepco1.SubsetLabels[4] := 'Peaches';\par
+\par
+    // Set Slice Labels //\par
+    Pepco1.PointLabels[0] := 'Texas';\par
+    Pepco1.PointLabels[1] := 'Oklahoma';\par
+    Pepco1.PointLabels[2] := 'Kansas';\par
+    Pepco1.PointLabels[3] := 'New Mexico';\par
+    Pepco1.PointLabels[4] := 'Colorado';\par
+    Pepco1.PointLabels[5] := 'Wyoming';\par
+    Pepco1.PointLabels[6] := 'Utah';\par
+    Pepco1.PointLabels[7] := 'Arizona';\par
+    Pepco1.PointLabels[8] := 'Nebraska';\par
+    Pepco1.PointLabels[9] := 'South Dakota';\par
+    Pepco1.PointLabels[10] := 'North Dakota';\par
+    Pepco1.PointLabels[11] := 'Iowa';\par
+\par
+    // Set Slice Colors //\par
+    Pepco1.SubsetColors[0] := Pepco1.PEargb(255, 198, 0, 0);\par
+    Pepco1.SubsetColors[1] := Pepco1.PEargb(255, 0, 198, 0);\par
+    Pepco1.SubsetColors[2] := Pepco1.PEargb(255, 198, 198, 0);\par
+    Pepco1.SubsetColors[3] := Pepco1.PEargb(255, 0, 0, 198);\par
+    Pepco1.SubsetColors[4] := Pepco1.PEargb(255, 198, 0, 198);\par
+    Pepco1.SubsetColors[5] := Pepco1.PEargb(255, 0, 198, 198);\par
+    Pepco1.SubsetColors[6] := Pepco1.PEargb(255, 192, 192, 192);\par
+    Pepco1.SubsetColors[7] := Pepco1.PEargb(255, 148, 0, 0);\par
+    Pepco1.SubsetColors[8] := Pepco1.PEargb(255, 0, 148, 0);\par
+    Pepco1.SubsetColors[9] := Pepco1.PEargb(255, 148, 148, 0);\par
+    Pepco1.SubsetColors[10] := Pepco1.PEargb(255, 0, 168, 168);\par
+    Pepco1.SubsetColors[11] := Pepco1.PEargb(255, 132, 132, 132);\par
+    Pepco1.SubsetColors[12] := Pepco1.PEargb(255, 0, 0, 0);\par
+\par
+    // Set Titles //\par
+    Pepco1.MainTitle := 'Produce by State';\par
+    Pepco1.SubTitle := '';\par
+\par
+    // Set various other properties //\par
+    Pepco1.FocalRect := False;\par
+    Pepco1.DataPrecision := pcOneDecimal;\par
+    Pepco1.GroupingPercent := pcFourPercent;\par
+    Pepco1.DataShadows := pcWithThreeD;\par
+    Pepco1.Disable3dShadow := False;\par
+    Pepco1.AutoExplode := pcExplodeAllSubsets;\par
+    Pepco1.PrepareImages := True;\par
+    Pepco1.CacheBmp := True;\par
+    Pepco1.FontSize := pcLarge;\par
+    Pepco1.FixedFonts := True;\par
+\par
+    Pepco1.BitmapGradientMode := True;\par
+    Pepco1.QuickStyle := eQuickStyle.pcDarkNoBorder;\par
+\par
+    Pepco1.TextShadows := pcShadowBoldText;\par
+    Pepco1.MainTitleBold := True;\par
+    Pepco1.SubTitleBold := True;\par
+    Pepco1.LabelBold := True;\par
+\par
+    // Set various export defaults //\par
+    Pepco1.DpiX := 600;\par
+    Pepco1.DpiY := 600;\par
+\par
+    Pepco1.ExportSizeDef := pcExportNoSizeOrPixels;\par
+    Pepco1.ExportTypeDef := pcExportPng;\par
+    Pepco1.ExportDestDef := pcExportToClipboard;\par
+    Pepco1.ExportUnitXDef := '1280';\par
+    Pepco1.ExportUnitYDef := '768';\par
+    Pepco1.ExportImageDpi := 300;\par
+    Pepco1.AllowSvgExport := True;\par
+\par
+    Pepco1.RenderEngine := pcDirect2D;\par
+    Pepco1.AntiAliasGraphics := True;\par
+    Pepco1.AntiAliasText := True;\par
+\par
+    Pepco1.PEactions := pcReinitAndReset;\par
+\par
+  End\par
+Else If nChart = 301 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{301  Pie Chart showing exploded slices\}\par
+\par
+    //! Double click slice label to explode. //\par
+\par
+    // This example builds upon the basic CreateSimplePie '300' example chart //\par
+    CreateSimplePie;\par
+\par
+    // Explode 4th and 6th slices\par
+    Pepco1.YData[0, 3] := 1;\par
+    Pepco1.YData[0, 5] := 1;\par
+\par
+    // Set various other properties //\par
+    Pepco1.BitmapGradientMode := False;\par
+    Pepco1.QuickStyle := pcMedShadow;\par
+\par
+    Pepco1.DataShadows := pcWithShadows;\par
+    Pepco1.PieGradientStyle := pcBeveledHighLight;\par
+\par
+     // Add Some Padding on Right and Bottom //\par
+    Pepco1.ImageAdjustLeft := 100;\par
+    Pepco1.ImageAdjustRight := 100;\par
+    Pepco1.ImageAdjustBottom := 100;\par
+\par
+  End\par
+Else If nChart = 302 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{302  Pie Chart showing optional legend\}\par
+\par
+   //! Double click slice label to explode. //\par
+\par
+   // This example builds upon the basic CreateSimplePie '300' example chart //\par
+   CreateSimplePie;\par
+\par
+   // Change Data //\par
+   Pepco1.Subsets := 1;\par
+   Pepco1.Points := 5;\par
+\par
+   For p:=0 to 5 Do\par
+        Pepco1.XData[0,p] := (Random * 5) + (Random * 100) / 100.0;\par
+\par
+   Pepco1.ShowPieLegend := True;\par
+   Pepco1.ShowPieLabels := pcPercentOnly;\par
+\par
+   Pepco1.LegendLocation := pcLegendLeft;\par
+   Pepco1.Disable3dShadow := True;\par
+\par
+   // Set various other properties //\par
+   Pepco1.BitmapGradientMode := True;\par
+   Pepco1.DeskColor := 1; // 1 means transparent, no RGB fill\par
+   Pepco1.DeskBmpFilename := 'cloud.jpg';\par
+   Pepco1.DeskBmpStyle := pcTiledBlt;\par
+   Pepco1.GraphForeColor := Pepco1.PEargb(255, 0, 0, 0);\par
+   Pepco1.TextColor := Pepco1.PEargb(255, 0, 0, 0);\par
+\par
+   Pepco1.SubsetColors[0] := Pepco1.PEargb(120, 198, 0, 0);\par
+   Pepco1.SubsetColors[1] := Pepco1.PEargb(120, 0, 198, 0);\par
+   Pepco1.SubsetColors[2] := Pepco1.PEargb(120, 198, 198, 0);\par
+   Pepco1.SubsetColors[3] := Pepco1.PEargb(120, 0, 0, 198);\par
+   Pepco1.SubsetColors[4] := Pepco1.PEargb(120, 198, 0, 198);\par
+\par
+   Pepco1.DataShadows := pcNo3D;\par
+\par
+   // Add Some Padding on Right and Bottom //\par
+   Pepco1.ImageAdjustLeft := 100;\par
+   Pepco1.ImageAdjustRight := 100;\par
+   Pepco1.ImageAdjustBottom := 100\par
+\par
+  End\par
+Else If nChart = 303 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{303  Pie Chart showing slice hatching\}\par
+    //! Double click slice label to explode. //\par
+    // This example builds upon the basic CreateSimplePie '300' example chart //\par
+    CreateSimplePie;\par
+\par
+    // Change Data //\par
+    Pepco1.Subsets := 5;\par
+    Pepco1.Points := 6;\par
+\par
+    For s := 0 To 4 do\par
+        For p:= 0 to 5 do\par
+        begin\par
+            Pepco1.XData[0,p] :=  (Random * 5) + (Random * 100) / 100.0;\par
+        end;\par
+\par
+    Pepco1.SubsetHatch[0] := pcBDiagonalHatch;\par
+    Pepco1.SubsetHatch[1] := pcCrossHatch;\par
+    Pepco1.SubsetHatch[2] := pcVerticalHatch;\par
+    Pepco1.SubsetHatch[3] := pcFDiagonalHatch;\par
+    Pepco1.SubsetHatch[4] := pcHorizontalHatch;\par
+    Pepco1.SubsetHatch[5] := pcDiagonalCrossHatch;\par
+\par
+    Pepco1.HatchBackColor := Pepco1.PEargb(255,230,230,230);\par
+    Pepco1.SliceHatching := pcMonoAndColorHatch;\par
+\par
+    // Explode 2nd and 4th slices //\par
+    Pepco1.YData[0, 1] := 1;\par
+    Pepco1.YData[0, 3] := 1;\par
+\par
+    Pepco1.Disable3dShadow := True;\par
+    Pepco1.DataShadows := pcWithThreeD;\par
+\par
+    // Set various other properties //\par
+    Pepco1.BitmapGradientMode := True;\par
+    Pepco1.QuickStyle := eQuickStyle.pcDarkNoBorder;\par
+    Pepco1.PieGradientStyleMenu := pcHideMenu;\par
+\par
+    // Add Some Padding on Right and Bottom //\par
+    Pepco1.ImageAdjustRight := 100;\par
+    Pepco1.ImageAdjustBottom := 100;\par
+    Pepco1.ImageAdjustLeft := 100;\par
+\par
+\par
+  End\par
+Else If nChart = 304 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{304  Pie Chart showing slice hatching\}\par
+\par
+\par
+End\par
+Else If nChart = 399 Then\par
+  Begin\par
+\par
+\par
+End; \{If\}\par
+\par
+Pepco1.PEactions := pcReinitAndReset;\par
+\par
+If (Form5.Visible = False) Then Form5.Show;\par
+\par
+End;\par
+\par
+\{////////////////////////////\}\par
+\{create a basic chart to build from\}\par
+Procedure TForm5.CreateSimplePie;\par
+\par
+Var\par
+    s : Integer;\par
+    p : Integer;\par
+\par
+Begin\par
+    //! Size this control and use the vertical scrollbar to\par
+    //! quickly see multiple variations.  Note we've added a zero data point for the first subset.  This demonstrates\par
+    //! how ProEssentials automatically annotates zero slices and controls which slices are included in the "*Other"\par
+    //! slice grouping.  Sizing to a small square stresses our text positioning logic that demonstrates three\par
+    //! algorithms attempting to prevent text from overlapping.\par
+\par
+    //! Double click slice label to explode. //\par
+\par
+    // Example showing a simple Pie Chart construction //\par
+    Pepco1.Subsets := 5;\par
+    Pepco1.Points := 12;\par
+\par
+    // Pass data for slices //\par
+    for s := 0 To 4 do\par
+        for p := 0 To 11 do\par
+            Pepco1.XData[s, p] := (Random * 5) + (Random * 100) / 100.0;\par
+    Pepco1.XData[0, 3] := 0.0;\par
+\par
+    // Set Subset labels //\par
+    Pepco1.SubsetLabels[0] := 'Apples';\par
+    Pepco1.SubsetLabels[1] := 'Oranges';\par
+    Pepco1.SubsetLabels[2] := 'Pears';\par
+    Pepco1.SubsetLabels[3] := 'Plums';\par
+    Pepco1.SubsetLabels[4] := 'Peaches';\par
+\par
+    // Set Slice Labels //\par
+    Pepco1.PointLabels[0] := 'Texas';\par
+    Pepco1.PointLabels[1] := 'Oklahoma';\par
+    Pepco1.PointLabels[2] := 'Kansas';\par
+    Pepco1.PointLabels[3] := 'New Mexico';\par
+    Pepco1.PointLabels[4] := 'Colorado';\par
+    Pepco1.PointLabels[5] := 'Wyoming';\par
+    Pepco1.PointLabels[6] := 'Utah';\par
+    Pepco1.PointLabels[7] := 'Arizona';\par
+    Pepco1.PointLabels[8] := 'Nebraska';\par
+    Pepco1.PointLabels[9] := 'South Dakota';\par
+    Pepco1.PointLabels[10] := 'North Dakota';\par
+    Pepco1.PointLabels[11] := 'Iowa';\par
+\par
+    // Set Slice Colors //\par
+    Pepco1.SubsetColors[0] := Pepco1.PEargb(255, 198, 0, 0);\par
+    Pepco1.SubsetColors[1] := Pepco1.PEargb(255, 0, 198, 0);\par
+    Pepco1.SubsetColors[2] := Pepco1.PEargb(255, 198, 198, 0);\par
+    Pepco1.SubsetColors[3] := Pepco1.PEargb(255, 0, 0, 198);\par
+    Pepco1.SubsetColors[4] := Pepco1.PEargb(255, 198, 0, 198);\par
+    Pepco1.SubsetColors[5] := Pepco1.PEargb(255, 0, 198, 198);\par
+    Pepco1.SubsetColors[6] := Pepco1.PEargb(255, 192, 192, 192);\par
+    Pepco1.SubsetColors[7] := Pepco1.PEargb(255, 148, 0, 0);\par
+    Pepco1.SubsetColors[8] := Pepco1.PEargb(255, 0, 148, 0);\par
+    Pepco1.SubsetColors[9] := Pepco1.PEargb(255, 148, 148, 0);\par
+    Pepco1.SubsetColors[10] := Pepco1.PEargb(255, 0, 168, 168);\par
+    Pepco1.SubsetColors[11] := Pepco1.PEargb(255, 132, 132, 132);\par
+    Pepco1.SubsetColors[12] := Pepco1.PEargb(255, 0, 0, 0);\par
+\par
+    // Set Titles //\par
+    Pepco1.MainTitle := 'Produce by State';\par
+    Pepco1.SubTitle := '';\par
+\par
+    // Set various other properties //\par
+    Pepco1.FocalRect := False;\par
+    Pepco1.DataPrecision := pcOneDecimal;\par
+    Pepco1.GroupingPercent := pcFourPercent;\par
+    Pepco1.DataShadows := pcWithThreeD;\par
+    Pepco1.Disable3dShadow := False;\par
+    Pepco1.AutoExplode := pcExplodeAllSubsets;\par
+    Pepco1.PrepareImages := True;\par
+    Pepco1.CacheBmp := True;\par
+    Pepco1.FontSize := pcLarge;\par
+    Pepco1.FixedFonts := True;\par
+\par
+    Pepco1.BitmapGradientMode := True;\par
+    Pepco1.QuickStyle := eQuickStyle.pcDarkNoBorder;\par
+\par
+    Pepco1.TextShadows := pcShadowBoldText;\par
+    Pepco1.MainTitleBold := True;\par
+    Pepco1.SubTitleBold := True;\par
+    Pepco1.LabelBold := True;\par
+\par
+    // Set various export defaults //\par
+    Pepco1.DpiX := 600;\par
+    Pepco1.DpiY := 600;\par
+\par
+    Pepco1.ExportSizeDef := pcExportNoSizeOrPixels;\par
+    Pepco1.ExportTypeDef := pcExportPng;\par
+    Pepco1.ExportDestDef := pcExportToClipboard;\par
+    Pepco1.ExportUnitXDef := '1280';\par
+    Pepco1.ExportUnitYDef := '768';\par
+    Pepco1.ExportImageDpi := 300;\par
+    Pepco1.AllowSvgExport := True;\par
+\par
+    Pepco1.RenderEngine := pcDirect2D;\par
+    Pepco1.AntiAliasGraphics := True;\par
+    Pepco1.AntiAliasText := True;\par
+\par
+    Pepco1.PEactions := pcReinitAndReset;\par
+\par
+End;\par
+\par
+procedure TForm5.FormResize(Sender: TObject);\par
+begin\par
+Pepco1.left := 0;\par
+Pepco1.top := 0;\par
+Pepco1.Width := Form5.ClientWidth;\par
+Pepco1.Height := Form5.ClientHeight;\par
+end;\par
+\par
+procedure TForm5.FormShow(Sender: TObject);\par
+begin\par
+Form5.left := 0;\par
+Form5.top := trunc(Screen.Height / 3);\par
+\par
+if (Screen.Width > 1920) then\par
+  Form5.Width := 1920\par
+else\par
+  Form5.Width := Screen.Width;\par
+\par
+Form5.Height := trunc(Screen.Height * 1.9 / 3);\par
+end;\par
+\par
+end.\par
+\par
+}
+ 

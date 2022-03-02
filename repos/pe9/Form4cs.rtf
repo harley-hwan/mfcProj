@@ -1,0 +1,605 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\f0\fs22\lang1033 using System;\par
+using System.IO;\par
+using Gigasoft.ProEssentials.Enums;\par
+using System.Windows.Input;\par
+using System.Drawing;\par
+\par
+namespace PEWinformDemo\par
+\{\par
+\tab /// <summary>\par
+\tab /// Summary description for Form4.\par
+\tab /// </summary>\par
+\tab public class Form4 \par
+\tab\{\par
+\par
+        private static void CreateSimplePolar(Gigasoft.ProEssentials.Pepso Pepso1)\par
+\tab\tab\{\par
+\tab\tab\tab // Define how much data in in chart ///\par
+\tab\tab\tab Pepso1.PeData.Subsets = 2;\par
+\tab\tab\tab Pepso1.PeData.Points = 360;\par
+\par
+\tab\tab\tab // Set first subset's data //\par
+\tab\tab\tab Int32  p;\par
+\tab\tab\tab for( p = 0; p <= 359; p++)\par
+\tab\tab\tab\{\par
+\tab\tab\tab\tab Pepso1.PeData.X[0, p] = p;\par
+\tab\tab\tab\tab Pepso1.PeData.Y[0, p] = (float)(150 * (Math.Sin(p * 0.054) * 1.0F));\par
+\tab\tab\tab\}\par
+\par
+\tab\tab\tab // Set second subset's data //\par
+\tab\tab\tab for( p = 0; p <= 359; p++)\par
+\tab\tab\tab\{\par
+\tab\tab\tab\tab Pepso1.PeData.X[1, p] = p;\par
+\tab\tab\tab\tab Pepso1.PeData.Y[1, p] = (float)(150 * (Math.Sin(p * 0.044)) * 2.0F);\par
+\tab\tab\tab\}\par
+\par
+\tab\tab\tab // Set plotting method, zooming, etc //\par
+\tab\tab\tab Pepso1.PePlot.Method = PSGraphPlottingMethod.PointsPlusLine;\par
+\tab\tab\tab Pepso1.PeUserInterface.Allow.Zooming = AllowZooming.HorzAndVert;\par
+\par
+\tab\tab\tab Pepso1.PeString.MainTitle = "Polar Chart";\par
+\tab\tab\tab Pepso1.PeString.SubTitle = "";\par
+\tab\tab\tab Pepso1.PeFont.SizeLegendCntl = 0.9F;\par
+\tab\tab\tab Pepso1.PeConfigure.PrepareImages = true;\par
+\tab\tab\tab Pepso1.PeConfigure.CacheBmp = true;\par
+\tab\tab\tab Pepso1.PeUserInterface.Allow.FocalRect = false;\par
+\par
+\tab\tab\tab // Set Subset line types //\par
+\tab\tab\tab Pepso1.PeLegend.SubsetLineTypes[0] = LineType.MediumSolid;\par
+\tab\tab\tab Pepso1.PeLegend.SubsetLineTypes[1] = LineType.MediumSolid;\par
+\par
+\tab\tab\tab // Set Subset colors //\par
+\tab\tab\tab Pepso1.PeColor.SubsetColors[0] = Color.FromArgb(255, 198, 0, 0);\par
+\tab\tab\tab Pepso1.PeColor.SubsetColors[1] = Color.FromArgb(255, 0, 198, 0);\par
+\par
+\tab\tab\tab // Set Subset point types //\par
+\tab\tab\tab Pepso1.PeLegend.SubsetPointTypes[0] = PointType.DotSolid;\par
+\tab\tab\tab Pepso1.PeLegend.SubsetPointTypes[1] = PointType.DotSolid;\par
+\par
+\tab\tab\tab // Set Subset labels //\par
+\tab\tab\tab Pepso1.PeString.SubsetLabels[0] = "Signal #1";\par
+\tab\tab\tab Pepso1.PeString.SubsetLabels[1] = "Signal #2";\par
+\par
+\tab\tab\tab // Change null data value so zeros are plotted //\par
+\tab\tab\tab Pepso1.PeData.NullDataValueX = -99999;\par
+\tab\tab\tab Pepso1.PeData.NullDataValue = -99999;\par
+\par
+\tab\tab\tab // Set Various other features //\par
+\tab\tab\tab Pepso1.PeFont.Fixed = true;\par
+\tab\tab\tab Pepso1.PeColor.BitmapGradientMode = true;\par
+\tab\tab\tab Pepso1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+\tab\tab\tab Pepso1.PeLegend.SimplePoint = true;\par
+\tab\tab\tab Pepso1.PeLegend.SimpleLine = true;\par
+\tab\tab\tab Pepso1.PeLegend.Style = SimpleLegendStyle.OneLine;\par
+\tab\tab\tab Pepso1.PeUserInterface.Allow.ZoomStyle = ZoomStyle.Ro2Not;\par
+\tab\tab\tab Pepso1.PePlot.PointSize = PointSize.Small;\par
+\par
+            Pepso1.PeConfigure.TextShadows = TextShadows.BoldText;\par
+            Pepso1.PeFont.MainTitle.Bold = true;\par
+            Pepso1.PeFont.SubTitle.Bold = true;\par
+            Pepso1.PeFont.Label.Bold = true;\par
+            Pepso1.PePlot.Option.LineShadows = true;\par
+            Pepso1.PeFont.FontSize = FontSize.Medium;\par
+            Pepso1.PeFont.SizeGridNumberCntl = 1.2F;\par
+            Pepso1.PePlot.DataShadows = DataShadows.Shadows;\par
+\par
+            // v7.2 new features //\par
+            Pepso1.PePlot.Option.PointGradientStyle = PlotGradientStyle.VerticalAscentInverse;\par
+            Pepso1.PeColor.PointBorderColor = Color.FromArgb(100, 0, 0, 0);\par
+            Pepso1.PePlot.Option.LineSymbolThickness = 3;\par
+            Pepso1.PeUserInterface.Dialog.AllowSvgExport = true;\par
+\par
+            Pepso1.PeConfigure.ImageAdjustBottom = 100;\par
+\par
+            // Set various export defaults //\par
+            Pepso1.PeSpecial.DpiX = 600;\par
+            Pepso1.PeSpecial.DpiY = 600;\par
+\par
+            // default export setting //\par
+            Pepso1.PeUserInterface.Dialog.ExportSizeDef = ExportSizeDef.NoSizeOrPixel;\par
+            Pepso1.PeUserInterface.Dialog.ExportTypeDef = ExportTypeDef.Png;\par
+            Pepso1.PeUserInterface.Dialog.ExportDestDef = ExportDestDef.Clipboard;\par
+            Pepso1.PeUserInterface.Dialog.ExportUnitXDef = "1280";\par
+            Pepso1.PeUserInterface.Dialog.ExportUnitYDef = "768";\par
+            Pepso1.PeUserInterface.Dialog.ExportImageDpi = 300;\par
+            \par
+            Pepso1.PeConfigure.RenderEngine = RenderEngine.Direct2D;\par
+            Pepso1.PeConfigure.AntiAliasGraphics = true;\par
+            Pepso1.PeConfigure.AntiAliasText = true;\par
+\par
+            // Normally called at end of init, since we expect to add more settings, defer to later \par
+            // Pepso1.PeFunction.ReinitializeResetImage();\par
+            // Pepso1.Invalidate();\par
+            // Pepso1.Refresh();\par
+\par
+\tab\tab\}\par
+\par
+        public static void CreateAllCharts(Gigasoft.ProEssentials.Pepso Pepso1)\par
+\tab\tab\{\par
+            MainWindow.Timer1.Stop();\par
+\par
+            if (Pepso1 == null) \{ return; \}\par
+\tab\tab\par
+\tab\tab\tab Pepso1.PeFunction.Reset();\par
+            Pepso1.PeUserInterface.Dialog.ModelessAutoClose = true;\par
+\par
+\tab\tab\tab Pepso1.PeFunction.Reinitialize();\par
+\tab\tab\tab Pepso1.PeConfigure.PrepareImages = true;        \par
+\tab\tab\tab Random Rand_Num = new Random(unchecked((int)DateTime.Now.Ticks));\par
+\tab\tab\tab\par
+            if (MainWindow.m_nChart == 200)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //200  *** Simple Polar Chart ***\par
+\par
+                //! Right button click to show popup menu. //\par
+                //! Double Click to show customization dialog. //\par
+                //! Left-Click and drag to draw zoom box. Use popup memu or 'z' to undo zoom. //\par
+\par
+                // Simple example show the basics of a polar object. //\par
+                // Polar Graph's contain both YData and XData. //\par
+\par
+                // Define how much data in in chart ///\par
+                Pepso1.PeData.Subsets = 2;\par
+                Pepso1.PeData.Points = 360;\par
+\par
+                // Define how much data in in chart ///\par
+                for (int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[0, p] = p;\par
+                    Pepso1.PeData.Y[0, p] = (float)(150 * (Math.Sin(p * 0.054) * 1.0F));\par
+                \}\par
+\par
+                // Set second subset's data //\par
+                for (int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[1, p] = p;\par
+                    Pepso1.PeData.Y[1, p] = (float)(150 * (Math.Sin(p * 0.044)) * 2.0F);\par
+                \}\par
+\par
+                // Set plotting method, zooming, etc //\par
+                Pepso1.PePlot.Method = PSGraphPlottingMethod.PointsPlusLine;\par
+                Pepso1.PeUserInterface.Allow.Zooming = AllowZooming.HorzAndVert;\par
+\par
+                Pepso1.PeString.MainTitle = "Polar Chart";\par
+                Pepso1.PeString.SubTitle = "";\par
+                Pepso1.PeFont.SizeLegendCntl = 0.9F;\par
+                Pepso1.PeConfigure.PrepareImages = true;\par
+                Pepso1.PeConfigure.CacheBmp = true;\par
+                Pepso1.PeUserInterface.Allow.FocalRect = false;\par
+\par
+                // Set Subset line types //\par
+                Pepso1.PeLegend.SubsetLineTypes[0] = LineType.MediumSolid;\par
+                Pepso1.PeLegend.SubsetLineTypes[1] = LineType.MediumSolid;\par
+\par
+                // Set Subset colors //\par
+                Pepso1.PeColor.SubsetColors[0] = Color.FromArgb(255, 198, 0, 0);\par
+                Pepso1.PeColor.SubsetColors[1] = Color.FromArgb(255, 0, 198, 0);\par
+\par
+                // Set Subset point types //\par
+                Pepso1.PeLegend.SubsetPointTypes[0] = PointType.DotSolid;\par
+                Pepso1.PeLegend.SubsetPointTypes[1] = PointType.DotSolid;\par
+\par
+                // Set Subset labels //\par
+                Pepso1.PeString.SubsetLabels[0] = "Signal #1";\par
+                Pepso1.PeString.SubsetLabels[1] = "Signal #2";\par
+\par
+                // Change null data value so zeros are plotted //\par
+                Pepso1.PeData.NullDataValueX = -99999;\par
+                Pepso1.PeData.NullDataValue = -99999;\par
+\par
+                // Set Various other features //\par
+                Pepso1.PeFont.Fixed = true;\par
+                Pepso1.PeColor.BitmapGradientMode = true;\par
+                Pepso1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+                Pepso1.PeLegend.SimplePoint = true;\par
+                Pepso1.PeLegend.SimpleLine = true;\par
+                Pepso1.PeLegend.Style = SimpleLegendStyle.OneLine;\par
+                Pepso1.PeUserInterface.Allow.ZoomStyle = ZoomStyle.Ro2Not;\par
+                Pepso1.PePlot.PointSize = PointSize.Small;\par
+\par
+                Pepso1.PeConfigure.TextShadows = TextShadows.BoldText;\par
+                Pepso1.PeFont.MainTitle.Bold = true;\par
+                Pepso1.PeFont.SubTitle.Bold = true;\par
+                Pepso1.PeFont.Label.Bold = true;\par
+                Pepso1.PePlot.Option.LineShadows = true;\par
+                Pepso1.PeFont.FontSize = FontSize.Medium;\par
+                Pepso1.PeFont.SizeGridNumberCntl = 1.2F;\par
+                Pepso1.PePlot.DataShadows = DataShadows.Shadows;\par
+\par
+                // v7.2 new features //\par
+                Pepso1.PePlot.Option.PointGradientStyle = PlotGradientStyle.VerticalAscentInverse;\par
+                Pepso1.PeColor.PointBorderColor = Color.FromArgb(100, 0, 0, 0);\par
+                Pepso1.PePlot.Option.LineSymbolThickness = 3;\par
+                Pepso1.PeUserInterface.Dialog.AllowSvgExport = true;\par
+\par
+                Pepso1.PeConfigure.ImageAdjustBottom = 100;\par
+\par
+                // Set various export defaults //\par
+                Pepso1.PeSpecial.DpiX = 600;\par
+                Pepso1.PeSpecial.DpiY = 600;\par
+\par
+                // default export setting //\par
+                Pepso1.PeUserInterface.Dialog.ExportSizeDef = ExportSizeDef.NoSizeOrPixel;\par
+                Pepso1.PeUserInterface.Dialog.ExportTypeDef = ExportTypeDef.Png;\par
+                Pepso1.PeUserInterface.Dialog.ExportDestDef = ExportDestDef.Clipboard;\par
+                Pepso1.PeUserInterface.Dialog.ExportUnitXDef = "1280";\par
+                Pepso1.PeUserInterface.Dialog.ExportUnitYDef = "768";\par
+                Pepso1.PeUserInterface.Dialog.ExportImageDpi = 300;\par
+\par
+                Pepso1.PeConfigure.RenderEngine = RenderEngine.Direct2D;\par
+                Pepso1.PeConfigure.AntiAliasGraphics = true;\par
+                Pepso1.PeConfigure.AntiAliasText = true;\par
+\par
+\par
+            \}\par
+            else if(MainWindow.m_nChart == 201)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //201  Polar Chart showing custom polar grid\par
+\par
+                //! Note degree axis is hours on clock //\par
+\par
+                // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+                CreateSimplePolar(Pepso1);\tab\tab\tab\tab\par
+\par
+                // Change the data for some variety //\par
+                for( int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[0, p] = p;\par
+                    Pepso1.PeData.Y[0, p] = (float)(Math.Sin(p * 0.019) * Math.Sin(p * 0.019));\par
+                \}\par
+\par
+                //Set second subset's data //\par
+                for( int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[1, p] = p;\par
+                    Pepso1.PeData.Y[1, p] = (float)(Math.Cos(p * 0.074));\par
+                \}\par
+\par
+                // Change zero degree to 12 o clock location //\par
+                Pepso1.PeGrid.Configure.ZeroDegreeOffset = 90;\par
+\par
+                // Set Manual Degree Line Frequencies //\par
+                Pepso1.PeGrid.Configure.ManualXAxisTicknLine = true;\par
+                Pepso1.PeGrid.Configure.ManualXAxisTick = 7.5;\par
+                Pepso1.PeGrid.Configure.ManualXAxisLine = 30;\par
+\par
+                // Change direction of increasing degrees //\par
+                Pepso1.PeGrid.Option.InvertedXAxis = true;\par
+\par
+                // Set Point Labels //'\par
+                Pepso1.PeString.PointLabels[0] = "12";\par
+                Pepso1.PeString.PointLabels[1] = "11";\par
+                Pepso1.PeString.PointLabels[2] = "10";\par
+                Pepso1.PeString.PointLabels[3] = "9";\par
+                Pepso1.PeString.PointLabels[4] = "8";\par
+                Pepso1.PeString.PointLabels[5] = "7";\par
+                Pepso1.PeString.PointLabels[6] = "6";\par
+                Pepso1.PeString.PointLabels[7] = "5";\par
+                Pepso1.PeString.PointLabels[8] = "4";\par
+                Pepso1.PeString.PointLabels[9] = "3";\par
+                Pepso1.PeString.PointLabels[10] = "2";\par
+                Pepso1.PeString.PointLabels[11] = "1";\par
+\par
+                // Set Various other features //\par
+                Pepso1.PeColor.BitmapGradientMode = true;\par
+                Pepso1.PeColor.QuickStyle = QuickStyle.MediumNoBorder;\par
+                Pepso1.PePlot.MarkDataPoints = true;\par
+            \}\par
+            else if(MainWindow.m_nChart == 202)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //202  Polar Chart showing bi-polar grid\par
+\par
+                //! Note there are two radius axes, one horizontal and one vertical //\par
+\par
+                // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+                CreateSimplePolar(Pepso1);\par
+\par
+                // Set last subset as a subset to be plotted //\par
+                // on a secondary axis //\par
+                Pepso1.PePlot.RYAxisComparisonSubsets = 1;\par
+                Pepso1.PePlot.MethodII = PSGraphPlottingMethodII.Line;\par
+\par
+                // Set second subset's data to a new range //\par
+                for( int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[1, p] = p;\par
+                    Pepso1.PeData.Y[1, p] = (float)(Math.Sin(p * 0.014) * 16.0F);\par
+                \}\par
+\par
+                // Set Various other features //\par
+                Pepso1.PeColor.BitmapGradientMode = true;\par
+                Pepso1.PeColor.QuickStyle = QuickStyle.DarkLine;\par
+                Pepso1.PeConfigure.BorderTypes = TABorder.NoBorder; \par
+                Pepso1.PePlot.PointSize = PointSize.Small;\par
+\par
+                // Add Some Padding on Right and Bottom //\par
+                Pepso1.PeConfigure.ImageAdjustLeft = 100;\par
+                Pepso1.PeConfigure.ImageAdjustRight = 100;\par
+                Pepso1.PeConfigure.ImageAdjustBottom = 100;\par
+            \}\par
+            else if(MainWindow.m_nChart == 203)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //203  Polar Chart showing smith chart\par
+\par
+                // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+                CreateSimplePolar(Pepso1);\par
+\par
+                // Enable Smith Mode //\par
+                Pepso1.PePlot.SmithChart = SmithChart.Smith;\par
+                Pepso1.PeString.MainTitle = "Smith Chart";\par
+\par
+                // Change the data to something more appropriate //\par
+                Pepso1.PeData.Subsets = 2;\par
+                Pepso1.PeData.Points = 40;\par
+\par
+                // Set first subset's data //\par
+                for( int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[0, p] = (float)(p * 0.1);\par
+                    Pepso1.PeData.Y[0, p] = (float)(Math.Sin(p * 0.54) * 0.2);\par
+                \}\par
+\par
+                // Set second subset's data //\par
+                for( int p = 0; p <= 359; p++)\par
+                \{\par
+                    Pepso1.PeData.X[1, p] = (float)(p * 0.5);\par
+                    Pepso1.PeData.Y[1, p] = (float)(Math.Sin(p * 0.44) * 0.5);\par
+                \}\par
+\par
+                // Set Various other features //\par
+                Pepso1.PeColor.BitmapGradientMode = true;\par
+                Pepso1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+\par
+                // Add Some Padding on Right and Bottom //\par
+                Pepso1.PeConfigure.ImageAdjustLeft = 100;\par
+                Pepso1.PeConfigure.ImageAdjustRight = 100;\par
+                Pepso1.PeConfigure.ImageAdjustBottom = 100;\par
+            \}\par
+            else if(MainWindow.m_nChart == 204)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //204  Polar Chart showing rose chart\par
+\par
+                //! Rose chart is a polar histogram/frequency distribution //\par
+\par
+                // Enable Smith Mode //\par
+                Pepso1.PePlot.SmithChart = SmithChart.Rose;\par
+                Pepso1.PeString.MainTitle = "Rose Chart";\par
+                Pepso1.PeString.SubTitle = "";\par
+\par
+                // Change the data to something more appropriate //\par
+                Pepso1.PeData.Subsets = 13;\par
+                Pepso1.PeData.Points = 16;\par
+\par
+                float[] DataX = new float[]\{90.0F, 67.5F, 45.0F, 22.5F, 0.0F, 337.5F, 315.0F, 292.5F, 270.0F, 247.5F, 225.0F, 202.5F, 180.0F, 157.5F, 135.0F, 112.5F\};\par
+\par
+                // Set first subset's data //\tab\tab\tab\tab\par
+                for( int s = 0; s <= 12; s++)\par
+                \{\par
+                    for( int p = 0; p <= 15; p++)\par
+                    \{\par
+                        Pepso1.PeData.X[s, p] = DataX[p];\par
+                        Pepso1.PeData.Y[s, p] = (float)(10 + (Rand_Num.NextDouble() * 25));\par
+                    \}\par
+                \}\par
+\par
+                // Set Point Labels, these will label degree grid lines //\par
+                Pepso1.PeString.PointLabels[0] = "E";\par
+                Pepso1.PeString.PointLabels[1] = "ENE";\par
+                Pepso1.PeString.PointLabels[2] = "NE";\par
+                Pepso1.PeString.PointLabels[3] = "NNE";\par
+                Pepso1.PeString.PointLabels[4] = "N";\par
+                Pepso1.PeString.PointLabels[5] = "NNW";\par
+                Pepso1.PeString.PointLabels[6] = "NW";\par
+                Pepso1.PeString.PointLabels[7] = "WNW";\par
+                Pepso1.PeString.PointLabels[8] = "W";\par
+                Pepso1.PeString.PointLabels[9] = "WSW";\par
+                Pepso1.PeString.PointLabels[10] = "SW";\par
+                Pepso1.PeString.PointLabels[11] = "SSW";\par
+                Pepso1.PeString.PointLabels[12] = "S";\par
+                Pepso1.PeString.PointLabels[13] = "SSE";\par
+                Pepso1.PeString.PointLabels[14] = "SE";\par
+                Pepso1.PeString.PointLabels[15] = "ESE";\par
+\par
+                // Set Subset Labels, these will show in legend //\par
+                Pepso1.PeString.SubsetLabels[0] = "3.75";\par
+                Pepso1.PeString.SubsetLabels[1] = "6.25";\par
+                Pepso1.PeString.SubsetLabels[2] = "8.75";\par
+                Pepso1.PeString.SubsetLabels[3] = "11.25";\par
+                Pepso1.PeString.SubsetLabels[4] = "13.75";\par
+                Pepso1.PeString.SubsetLabels[5] = "16.25";\par
+                Pepso1.PeString.SubsetLabels[6] = "18.75";\par
+                Pepso1.PeString.SubsetLabels[7] = "21.25";\par
+                Pepso1.PeString.SubsetLabels[8] = "23.75";\par
+                Pepso1.PeString.SubsetLabels[9] = "26.25";\par
+                Pepso1.PeString.SubsetLabels[10] = "28.75";\par
+                Pepso1.PeString.SubsetLabels[11] = "31.25";\par
+                Pepso1.PeString.SubsetLabels[12] = "33.75";\par
+\par
+                // Manually control degree line frequency //\par
+                Pepso1.PeGrid.Configure.ManualXAxisTicknLine = true;\par
+                Pepso1.PeGrid.Configure.ManualXAxisLine = 22.5;\par
+                Pepso1.PeGrid.Configure.ManualXAxisTick = 22.5;\par
+\par
+                // So monochrome images use just black and white //\par
+                Pepso1.PeColor.SubsetShades[0] = Color.Black;\par
+                Pepso1.PeColor.SubsetShades[1] = Color.White;\par
+\par
+                // Get rid of normal legend, rose has a special legend //\par
+                Pepso1.PeLegend.SubsetsToLegend[0] = -1;\par
+\par
+                // No radius line labels //\par
+                Pepso1.PeGrid.RadiusLabels = false;\par
+                Pepso1.PeFont.FontSize = Gigasoft.ProEssentials.Enums.FontSize.Small;\par
+\par
+                Pepso1.PeString.RoseCenterLabel = "1.25|1.1%";    // inner circle label\par
+\par
+                // Set Various other features //\par
+                Pepso1.PeUserInterface.Allow.Zooming = AllowZooming.Horizontal;\par
+                Pepso1.PeFont.Fixed = true;\par
+                Pepso1.PeColor.BitmapGradientMode = true;\par
+                Pepso1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+                Pepso1.PeLegend.SimplePoint = true;\par
+                Pepso1.PeLegend.SimpleLine = true;\par
+                Pepso1.PeLegend.Style = SimpleLegendStyle.OneLine;\par
+                Pepso1.PeUserInterface.Allow.ZoomStyle = ZoomStyle.Ro2Not;\par
+                Pepso1.PePlot.PointSize = PointSize.Small;\par
+                Pepso1.PeConfigure.PrepareImages = true;\par
+                Pepso1.PeConfigure.CacheBmp = true;\par
+\par
+                // Add Some Padding on Right and Bottom //\par
+                Pepso1.PeConfigure.ImageAdjustLeft = 100;\par
+                Pepso1.PeConfigure.ImageAdjustRight = 100;\par
+                Pepso1.PeConfigure.ImageAdjustBottom = 100;\par
+\par
+                Pepso1.PeConfigure.TextShadows = TextShadows.BoldText;\par
+                Pepso1.PeFont.MainTitle.Bold = true;\par
+                Pepso1.PeFont.SubTitle.Bold = true;\par
+                Pepso1.PeFont.Label.Bold = true;\par
+                Pepso1.PePlot.Option.LineShadows = true;\par
+                Pepso1.PeFont.FontSize = FontSize.Medium;\par
+                Pepso1.PeFont.SizeGridNumberCntl = 1.2F;\par
+                Pepso1.PePlot.DataShadows = DataShadows.Shadows;\par
+\par
+                // Set various export defaults //\par
+                Pepso1.PeSpecial.DpiX = 600;\par
+                Pepso1.PeSpecial.DpiY = 600;\par
+\par
+                // default export setting //\par
+                Pepso1.PeUserInterface.Dialog.ExportSizeDef = ExportSizeDef.NoSizeOrPixel;\par
+                Pepso1.PeUserInterface.Dialog.ExportTypeDef = ExportTypeDef.Png;\par
+                Pepso1.PeUserInterface.Dialog.ExportDestDef = ExportDestDef.Clipboard;\par
+                Pepso1.PeUserInterface.Dialog.ExportUnitXDef = "1280";\par
+                Pepso1.PeUserInterface.Dialog.ExportUnitYDef = "768";\par
+                Pepso1.PeUserInterface.Dialog.ExportImageDpi = 300;\par
+\par
+                Pepso1.PeConfigure.RenderEngine = RenderEngine.Direct2D;\par
+                Pepso1.PeConfigure.AntiAliasGraphics = true;\par
+                Pepso1.PeConfigure.AntiAliasText = true;\par
+\par
+            \}\par
+            else if(MainWindow.m_nChart == 205)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //205  Polar Chart showing fancy tick marks\par
+\par
+                //! Polar Chart with complex gridline and gridtick structure. //\par
+                //! Maximize, or better yet, Print this chart to see full detail. //\par
+                //! A quick way to print is give control focus and press 'p' //\par
+\par
+                // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+                CreateSimplePolar(Pepso1);\par
+\par
+                //! PEP_nPRINTSTYLECONTROL will cause image to automatically switch to monochrome //\par
+                //! when print export dialog is invoked. //\par
+                Pepso1.PeUserInterface.Dialog.PrintStyleControl = PrintStyleControl.DefaultMonochrome;\par
+\par
+                // Change Subsets to 1 //\par
+                Pepso1.PeData.Subsets = 1;\par
+                Pepso1.PeData.Points = 40;\par
+\par
+                // Pass some new data //\tab\tab\tab\tab\par
+                for( int p = 0; p <= 39; p++)\par
+                \{\par
+                    Pepso1.PeData.X[0, p] = p * 5;\par
+                    Pepso1.PeData.Y[0, p] = (float)(90 * Math.Sin(p * 0.24));\par
+                \}\par
+\par
+                // Manually Configure Degree Axis Density //\par
+                Pepso1.PeGrid.Configure.ManualXAxisTicknLine = true;\par
+                Pepso1.PeGrid.Configure.ManualXAxisLine = 10;  // major grid lines every 10 units\par
+                Pepso1.PeGrid.Configure.ManualXAxisTick = 2;   // minor tick marks every 2 units\par
+\par
+                // Manually Configure Radius Axis Density //\par
+                Pepso1.PeGrid.Configure.ManualYAxisTicknLine = true;\par
+                Pepso1.PeGrid.Configure.ManualYAxisLine = 10;  // major grid lines every 10 units\par
+                Pepso1.PeGrid.Configure.ManualYAxisTick = 2;   // minor tick marks every 2 units\par
+\par
+                // Manually Configure Radius Axis Range //\par
+                Pepso1.PeGrid.Configure.ManualScaleControlY = ManualScaleControl.MinMax;\par
+                Pepso1.PeGrid.Configure.ManualMinY = 0;\par
+                Pepso1.PeGrid.Configure.ManualMaxY = 105;\par
+\par
+                // Ticks draw similar to grid lines //\par
+                Pepso1.PeGrid.Option.XAxisLongTicks = true;\par
+                Pepso1.PeGrid.Option.YAxisLongTicks = true;\par
+\par
+                // tick marks only draw outside this diameter //\par
+                Pepso1.PeGrid.Configure.PolarTickThreshold = 60;\par
+\par
+                // major grid lines only draw outside this diameter //\par
+                Pepso1.PeGrid.Configure.PolarLineThreshold = 20;\par
+\par
+                // 30 degree major grid lines only draw outside this diameter //\par
+                Pepso1.PeGrid.Configure.Polar30DegreeThreshold = 1;\par
+\par
+                // Set  various other properties //\par
+                Pepso1.PeColor.BitmapGradientMode = false;\par
+                Pepso1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+                Pepso1.PeColor.ViewingStyle = ViewingStyle.Mono;\par
+                Pepso1.PeColor.GraphForeground = Color.FromArgb(255, 255, 255, 255);\par
+                Pepso1.PeColor.TickColor = Color.FromArgb(255, 70, 70, 70);\par
+                Pepso1.PePlot.Method = PSGraphPlottingMethod.Point;\par
+                Pepso1.PeGrid.Style = GridStyle.OnePixel;\par
+            \}\par
+            else if(MainWindow.m_nChart == 206)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //206  Polar Chart showing annotations\par
+\par
+                //! Horizontal Line Annotations Plot as Circles //\par
+\par
+                // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+                CreateSimplePolar(Pepso1);\par
+\par
+                // v9.5\par
+                Pepso1.PeUserInterface.Menu.AnnotationControl = true;\par
+\par
+                Pepso1.PeAnnotation.Line.YAxis[0] = 50;\par
+                Pepso1.PeAnnotation.Line.YAxisColor[0] = Color.FromArgb(255, 198, 0, 0);\par
+\par
+                Pepso1.PeAnnotation.Line.YAxis[1] = 100;\par
+                Pepso1.PeAnnotation.Line.YAxisColor[1] = Color.FromArgb(255, 0, 198, 198);\par
+\par
+                Pepso1.PeAnnotation.Line.YAxis[2] = 150;\par
+                Pepso1.PeAnnotation.Line.YAxisColor[2] = Color.FromArgb(255, 0, 198, 0);\par
+\par
+                Pepso1.PeAnnotation.Line.YAxis[3] = 200;\par
+                Pepso1.PeAnnotation.Line.YAxisColor[3] = Color.FromArgb(255, 198, 198, 0);\par
+\par
+                Pepso1.PeAnnotation.Line.YAxis[4] = 250;\par
+                Pepso1.PeAnnotation.Line.YAxisColor[4] = Color.FromArgb(255, 255, 255, 255);\par
+\par
+                Pepso1.PeAnnotation.Show = true;\par
+\par
+                // change subset colors //\par
+                Pepso1.PeColor.SubsetColors[0] = Color.FromArgb(255, 155, 0, 0);\par
+                Pepso1.PeColor.SubsetColors[1] = Color.FromArgb(255, 0, 155, 0);\par
+\par
+                // Only show Degree Grid Lines //\par
+                Pepso1.PeGrid.LineControl = GridLineControl.YAxis;\par
+            \}\par
+            ///end if\par
+\par
+            Pepso1.PeFunction.ReinitializeResetImage();\par
+            Pepso1.Invalidate();\par
+\par
+\tab\tab\}\par
+\tab\}\par
+\}\par
+\par
+}
+ 

@@ -1,0 +1,364 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\f0\fs22\lang1033 using System;\par
+using System.IO;\par
+using Gigasoft.ProEssentials.Enums;\par
+using System.Windows.Input;\par
+using System.Drawing;\par
+\par
+namespace PEWinformDemo\par
+\{\par
+\tab /// <summary>\par
+\tab /// Summary description for Form5.\par
+\tab /// </summary>\par
+\tab public class Form5 \par
+\tab\{\par
+\par
+\tab\tab private static void CreateSimplePie(Gigasoft.ProEssentials.Pepco Pepco1)\par
+\tab\tab\{\par
+\tab\tab\tab Int32 s, p;\par
+\par
+\tab\tab\tab // Set how much data object will hold //\par
+\tab\tab\tab Pepco1.PeData.Subsets = 5;\par
+\tab\tab\tab Pepco1.PeData.Points = 12;\par
+\par
+\tab\tab\tab // Pass data for slices //           \par
+\tab\tab\tab for(s=0; s<=4; s++)\par
+\tab\tab\tab\{\par
+\tab\tab\tab\tab for(p=0; p<=11; p++)\par
+\tab\tab\tab\tab\tab Pepco1.PeData.X[s, p] = (float) ((MainWindow.Rand_Num.NextDouble() * 5) + ((MainWindow.Rand_Num.NextDouble() * 100) / 100.0F));\par
+\tab\tab\tab\}\par
+\par
+\tab\tab\tab // Set Subset labels //\par
+\tab\tab\tab Pepco1.PeString.SubsetLabels[0] = "Apples";\par
+\tab\tab\tab Pepco1.PeString.SubsetLabels[1] = "Oranges";\par
+\tab\tab\tab Pepco1.PeString.SubsetLabels[2] = "Pears";\par
+\tab\tab\tab Pepco1.PeString.SubsetLabels[3] = "Plums";\par
+\tab\tab\tab Pepco1.PeString.SubsetLabels[4] = "Peaches";\par
+\par
+\tab\tab\tab // Set Slice Labels //\par
+\tab\tab\tab Pepco1.PeString.PointLabels[0] = "Texas";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[1] = "Oklahoma";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[2] = "Kansas";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[3] = "New Mexico";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[4] = "Colorado";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[5] = "Wyoming";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[6] = "Utah";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[7] = "Arizona";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[8] = "Nebraska";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[9] = "South Dakota";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[10] = "North Dakota";\par
+\tab\tab\tab Pepco1.PeString.PointLabels[11] = "Iowa";\par
+\par
+\tab\tab\tab // Set Slice Colors //\par
+            Pepco1.PeColor.SubsetColors[0] = Color.FromArgb(255, 198, 0, 0);\par
+            Pepco1.PeColor.SubsetColors[1] = Color.FromArgb(255, 0, 198, 0);\par
+            Pepco1.PeColor.SubsetColors[2] = Color.FromArgb(255, 198, 198, 0);\par
+            Pepco1.PeColor.SubsetColors[3] = Color.FromArgb(255, 0, 0, 198);\par
+            Pepco1.PeColor.SubsetColors[4] = Color.FromArgb(255, 198, 0, 198);\par
+            Pepco1.PeColor.SubsetColors[5] = Color.FromArgb(255, 0, 198, 198);\par
+            Pepco1.PeColor.SubsetColors[6] = Color.FromArgb(255, 192, 192, 192);\par
+            Pepco1.PeColor.SubsetColors[7] = Color.FromArgb(255, 198, 0, 0);\par
+            Pepco1.PeColor.SubsetColors[8] = Color.FromArgb(255, 0, 198, 0);\par
+            Pepco1.PeColor.SubsetColors[9] = Color.FromArgb(255, 198, 198, 0);\par
+            Pepco1.PeColor.SubsetColors[10] = Color.FromArgb(255, 0, 168, 168);\par
+            Pepco1.PeColor.SubsetColors[11] = Color.FromArgb(255, 132, 132, 132);\par
+            Pepco1.PeColor.SubsetColors[12] = Color.FromArgb(255, 0, 0, 0);\par
+\par
+\tab\tab\tab // Set Titles //\par
+\tab\tab\tab Pepco1.PeString.MainTitle = "Produce by State";\par
+\tab\tab\tab Pepco1.PeString.SubTitle = "";\par
+\par
+\tab\tab\tab // Set various other properties //\par
+\tab\tab\tab Pepco1.PeUserInterface.Allow.FocalRect = false;\par
+\tab\tab\tab Pepco1.PeData.Precision = DataPrecision.OneDecimal;\par
+\tab\tab\tab Pepco1.PePlot.GroupingPercent = GroupingPercent.FourPercent;\par
+\tab\tab\tab Pepco1.PePlot.DataShadows = DataShadows.ThreeDimensional;\par
+\tab\tab\tab Pepco1.PePlot.Show3DShadow = true;\par
+\tab\tab\tab Pepco1.PeUserInterface.AutoExplode = AutoExplode.AllSubsets;\par
+\tab\tab\tab Pepco1.PeConfigure.PrepareImages = true;\par
+\tab\tab\tab Pepco1.PeConfigure.CacheBmp = true;\par
+\tab\tab\tab Pepco1.PeFonts.FontSize = FontSize.Large;\par
+\tab\tab\tab Pepco1.PeFonts.Fixed = true;\par
+\par
+\tab\tab\tab Pepco1.PeColor.BitmapGradientMode = true;\par
+\tab\tab\tab Pepco1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+\par
+\tab\tab\tab Pepco1.PeConfigure.TextShadows = TextShadows.BoldText;\par
+\tab\tab\tab Pepco1.PeFonts.MainTitle.Bold = true;\par
+\tab\tab\tab Pepco1.PeFonts.SubTitle.Bold = true;\par
+\tab\tab\tab Pepco1.PeFonts.Label.Bold = true;\par
+\par
+            // Set various export defaults //\par
+            Pepco1.PeSpecial.DpiX = 600;\par
+            Pepco1.PeSpecial.DpiY = 600;\par
+\par
+            // default export setting //\par
+            Pepco1.PeUserInterface.Dialog.ExportSizeDef = ExportSizeDef.NoSizeOrPixel;\par
+            Pepco1.PeUserInterface.Dialog.ExportTypeDef = ExportTypeDef.Png;\par
+            Pepco1.PeUserInterface.Dialog.ExportDestDef = ExportDestDef.Clipboard;\par
+            Pepco1.PeUserInterface.Dialog.ExportUnitXDef = "1280";\par
+            Pepco1.PeUserInterface.Dialog.ExportUnitYDef = "768";\par
+            Pepco1.PeUserInterface.Dialog.ExportImageDpi = 300;\par
+\par
+            Pepco1.PeConfigure.RenderEngine = RenderEngine.Direct2D;\par
+            Pepco1.PeConfigure.AntiAliasGraphics = true;\par
+            Pepco1.PeConfigure.AntiAliasText = true;\par
+\par
+            // Normally called at end of init, since we expect to add more settings, defer to later \par
+            // Pepco1.PeFunction.ReinitializeResetImage();\par
+            // Pepco1.Invalidate();\par
+            // Pepco1.Refresh();\par
+\tab\tab\}\par
+\par
+\tab\tab public static void CreateAllCharts(Gigasoft.ProEssentials.Pepco Pepco1)\par
+\tab\tab\{\par
+            MainWindow.Timer1.Stop();\par
+\par
+            if (Pepco1 == null) \{ return; \}\par
+\par
+\tab\tab\tab Pepco1.PeFunction.Reset();\par
+            Pepco1.PeUserInterface.Dialog.ModelessAutoClose = true;\par
+\par
+\tab\tab\tab Pepco1.PeFunction.Reinitialize();\par
+\tab\tab\tab Pepco1.PeConfigure.PrepareImages = true;        \par
+\tab\tab\tab Random Rand_Num = new Random(unchecked((int)DateTime.Now.Ticks));\par
+\par
+            if(MainWindow.m_nChart == 300)\par
+            \{\tab\tab\tab\tab\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //300  *** Simple Pie Chart ***\par
+\par
+                //! V7's Pie Chart control has been improved again.  Size this control and use the vertical scrollbar to\par
+                //! quickly see multiple variations.  Note we've added a zero data point for the first subset.  This demonstrates\par
+                //! how ProEssentials automatically annotates zero slices and controls which slices are included in the "*Other"\par
+                //! slice grouping.  Sizing to a small square stresses our text positioning logic that demonstrates three\par
+                //! algorithms attempting to prevent text from overlapping.  There's no other pie chart on the market that\par
+                //! offers this attention to image detail. \par
+\par
+                //! Double click slice label to explode. //\par
+                //! Use vertical scrollbar to revolve through subsets. //\par
+\par
+                // Example showing a simple Pie Chart construction //\par
+\par
+                // Set how much data object will hold //\par
+                Pepco1.PeData.Subsets = 5;\par
+                Pepco1.PeData.Points = 12;\par
+\par
+                // Pass data for slices //           \par
+                for(int s=0; s<=4; s++)\par
+                \{\par
+                    for(int p=0; p<=11; p++)\par
+                        Pepco1.PeData.X[s, p] = (float) ((Rand_Num.NextDouble() * 5) + ((Rand_Num.NextDouble() * 100) / 100.0F));\par
+                \}\par
+\par
+                // Set Subset labels //\par
+                Pepco1.PeString.SubsetLabels[0] = "Apples";\par
+                Pepco1.PeString.SubsetLabels[1] = "Oranges";\par
+                Pepco1.PeString.SubsetLabels[2] = "Pears";\par
+                Pepco1.PeString.SubsetLabels[3] = "Plums";\par
+                Pepco1.PeString.SubsetLabels[4] = "Peaches";\par
+\par
+                // Set Slice Labels //\par
+                Pepco1.PeString.PointLabels[0] = "Texas";\par
+                Pepco1.PeString.PointLabels[1] = "Oklahoma";\par
+                Pepco1.PeString.PointLabels[2] = "Kansas";\par
+                Pepco1.PeString.PointLabels[3] = "New Mexico";\par
+                Pepco1.PeString.PointLabels[4] = "Colorado";\par
+                Pepco1.PeString.PointLabels[5] = "Wyoming";\par
+                Pepco1.PeString.PointLabels[6] = "Utah";\par
+                Pepco1.PeString.PointLabels[7] = "Arizona";\par
+                Pepco1.PeString.PointLabels[8] = "Nebraska";\par
+                Pepco1.PeString.PointLabels[9] = "South Dakota";\par
+                Pepco1.PeString.PointLabels[10] = "North Dakota";\par
+                Pepco1.PeString.PointLabels[11] = "Iowa";\par
+\par
+                // Set Slice Colors //\par
+                Pepco1.PeColor.SubsetColors[0] = Color.FromArgb(255, 198, 0, 0);\par
+                Pepco1.PeColor.SubsetColors[1] = Color.FromArgb(255, 0, 198, 0);\par
+                Pepco1.PeColor.SubsetColors[2] = Color.FromArgb(255, 198, 198, 0);\par
+                Pepco1.PeColor.SubsetColors[3] = Color.FromArgb(255, 0, 0, 198);\par
+                Pepco1.PeColor.SubsetColors[4] = Color.FromArgb(255, 198, 0, 198);\par
+                Pepco1.PeColor.SubsetColors[5] = Color.FromArgb(255, 0, 198, 198);\par
+                Pepco1.PeColor.SubsetColors[6] = Color.FromArgb(255, 192, 192, 192);\par
+                Pepco1.PeColor.SubsetColors[7] = Color.FromArgb(255, 198, 0, 0);\par
+                Pepco1.PeColor.SubsetColors[8] = Color.FromArgb(255, 0, 198, 0);\par
+                Pepco1.PeColor.SubsetColors[9] = Color.FromArgb(255, 198, 198, 0);\par
+                Pepco1.PeColor.SubsetColors[10] = Color.FromArgb(255, 0, 168, 168);\par
+                Pepco1.PeColor.SubsetColors[11] = Color.FromArgb(255, 132, 132, 132);\par
+                Pepco1.PeColor.SubsetColors[12] = Color.FromArgb(255, 0, 0, 0);\par
+\par
+                // Set Titles //\par
+                Pepco1.PeString.MainTitle = "Produce by State";\par
+                Pepco1.PeString.SubTitle = "";\par
+\par
+                // Set various other properties //\par
+                Pepco1.PeUserInterface.Allow.FocalRect = false;\par
+                Pepco1.PeData.Precision = DataPrecision.OneDecimal;\par
+                Pepco1.PePlot.GroupingPercent = GroupingPercent.FourPercent;\par
+                Pepco1.PePlot.DataShadows = DataShadows.ThreeDimensional;\par
+                Pepco1.PePlot.Show3DShadow = true;\par
+                Pepco1.PeUserInterface.AutoExplode = AutoExplode.AllSubsets;\par
+                Pepco1.PeConfigure.PrepareImages = true;\par
+                Pepco1.PeConfigure.CacheBmp = true;\par
+                Pepco1.PeFonts.FontSize = FontSize.Large;\par
+                Pepco1.PeFonts.Fixed = true;\par
+\par
+                Pepco1.PeColor.BitmapGradientMode = true;\par
+                Pepco1.PeColor.QuickStyle = QuickStyle.DarkNoBorder;\par
+\par
+                Pepco1.PeConfigure.TextShadows = TextShadows.BoldText;\par
+                Pepco1.PeFonts.MainTitle.Bold = true;\par
+                Pepco1.PeFonts.SubTitle.Bold = true;\par
+                Pepco1.PeFonts.Label.Bold = true;\par
+\par
+                // default export setting //\par
+                Pepco1.PeUserInterface.Dialog.ExportSizeDef = ExportSizeDef.NoSizeOrPixel;\par
+                Pepco1.PeUserInterface.Dialog.ExportTypeDef = ExportTypeDef.Png;\par
+                Pepco1.PeUserInterface.Dialog.ExportDestDef = ExportDestDef.Clipboard;\par
+                Pepco1.PeUserInterface.Dialog.ExportUnitXDef = "1280";\par
+                Pepco1.PeUserInterface.Dialog.ExportUnitYDef = "768";\par
+                Pepco1.PeUserInterface.Dialog.ExportImageDpi = 300;\par
+\par
+                Pepco1.PeConfigure.RenderEngine = RenderEngine.Direct2D;\par
+                Pepco1.PeConfigure.AntiAliasGraphics = true;\par
+                Pepco1.PeConfigure.AntiAliasText = true;\par
+\par
+            \}\par
+            else if(MainWindow.m_nChart == 301)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //301  Pie Chart showing exploded slices\par
+\par
+                //! Double click slice label to explode. //\par
+                //! Use vertical scrollbar to revolve through subset. //\par
+\par
+                // This example builds upon the basic CreateSimplePie '300' example chart //\par
+                CreateSimplePie(Pepco1);\par
+\par
+                // Explode 4th and 6th slices ///\par
+                Pepco1.PeData.Y[0, 3] = 1;\par
+                Pepco1.PeData.Y[0, 5] = 1;\par
+\par
+                // Set various other properties //\par
+                Pepco1.PeColor.BitmapGradientMode = false;\par
+                Pepco1.PeColor.QuickStyle = QuickStyle.MediumShadow;\par
+                Pepco1.PePlot.DataShadows = DataShadows.Shadows;\par
+                Pepco1.PePlot.GradientStyle = PieGradientStyle.BeveledHighlight; \par
+\par
+                // Add Some Padding on Right and Bottom //\par
+                Pepco1.PeConfigure.ImageAdjustLeft = 100;\par
+                Pepco1.PeConfigure.ImageAdjustRight = 100;\par
+                Pepco1.PeConfigure.ImageAdjustBottom = 100;\par
+            \}\par
+            else if(MainWindow.m_nChart == 302)\par
+            \{\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //302  Pie Chart showing optional legend\par
+\par
+                //! Double click slice label to explode. //\par
+\par
+                // This example builds upon the basic CreateSimplePie '300' example chart //\par
+                CreateSimplePie(Pepco1);\par
+\par
+                // Change Data //\par
+                Pepco1.PeData.Subsets = 1;\par
+                Pepco1.PeData.Points = 5;\par
+\par
+                for( int p = 0; p <= 4; p++)\par
+                    Pepco1.PeData.X[0, p] = (float)((Rand_Num.NextDouble() * 5) + ((Rand_Num.NextDouble() * 100) / 100.0F));\par
+\par
+                Pepco1.PeLegend.ShowPieLegend = true;\par
+                Pepco1.PePlot.ShowPieLabels = ShowPieLabels.PercentOnly;\par
+\par
+                Pepco1.PeLegend.Location = LegendLocation.Left;\par
+                Pepco1.PePlot.Show3DShadow = false;\par
+\par
+                // Set various other properties //\par
+                Pepco1.PeColor.BitmapGradientMode = true;\par
+                Pepco1.PeColor.Desk = Color.FromArgb(0, 1, 0, 0);  // Empty equiv Color.Empty;\par
+                Pepco1.PeColor.DeskBmpFilename = System.AppDomain.CurrentDomain.BaseDirectory + "cloud.jpg";\par
+                Pepco1.PeColor.DeskBmpStyle = BitmapStyle.TiledBitBlt;\par
+                Pepco1.PeColor.GraphForeground = Color.FromArgb(255, 0, 0, 0);\par
+                Pepco1.PeColor.Text = Color.Black;\par
+\par
+                // Set Slice Colors //\par
+                Pepco1.PeColor.SubsetColors[0] = Color.FromArgb(120, 198, 0, 0);\par
+                Pepco1.PeColor.SubsetColors[1] = Color.FromArgb(120, 0, 198, 0);\par
+                Pepco1.PeColor.SubsetColors[2] = Color.FromArgb(120, 198, 198, 0);\par
+                Pepco1.PeColor.SubsetColors[3] = Color.FromArgb(120, 0, 0, 198);\par
+                Pepco1.PeColor.SubsetColors[4] = Color.FromArgb(120, 198, 0, 198);\par
+\par
+                Pepco1.PePlot.DataShadows = DataShadows.None; \par
+\par
+                // Add Some Padding on Right and Bottom //\par
+                Pepco1.PeConfigure.ImageAdjustLeft = 100;\par
+                Pepco1.PeConfigure.ImageAdjustRight = 100;\par
+                Pepco1.PeConfigure.ImageAdjustBottom = 100;\par
+            \}\par
+            else if(MainWindow.m_nChart == 303)\par
+            \{\tab\par
+                //*********************************************************************'\par
+                //*********************************************************************'\par
+                //303  Pie Chart showing hatching\par
+\par
+                //! Double click slice label to explode. //\par
+                //! Use vertical scrollbar to revolve through subset. //\par
+\par
+                // This example builds upon the basic CreateSimplePie '300' example chart //\par
+                CreateSimplePie(Pepco1);\par
+\par
+                // Change Data //\par
+                Pepco1.PeData.Subsets = 5;\par
+                Pepco1.PeData.Points = 6;\par
+\par
+                for( int s = 0; s <= 4; s++)\par
+                \{\par
+                    for( int p = 0; p <= 5; p++)\par
+                        Pepco1.PeData.X[s, p] = (float)((Rand_Num.NextDouble() * 5) + ((Rand_Num.NextDouble() * 100) / 100.0));\par
+                \}\par
+\par
+                Pepco1.PePlot.SubsetHatch[0] = HatchType.BDiagonal;\par
+                Pepco1.PePlot.SubsetHatch[1] = HatchType.Cross;\par
+                Pepco1.PePlot.SubsetHatch[2] = HatchType.Vertical;\par
+                Pepco1.PePlot.SubsetHatch[3] = HatchType.FDiagonal;\par
+                Pepco1.PePlot.SubsetHatch[4] = HatchType.Horizontal;\par
+                Pepco1.PePlot.SubsetHatch[5] = HatchType.DiagonalCross;\par
+\par
+                Pepco1.PeColor.HatchBackColor = Color.FromArgb(255, 230, 230, 230);\par
+                Pepco1.PePlot.SliceHatching = SliceHatching.MonochromePlusColor;\par
+\par
+                // Explode 2nd and 4th slices //\par
+                Pepco1.PeData.Y[0, 1] = 1;\par
+                Pepco1.PeData.Y[0, 3] = 1;\par
+\par
+                Pepco1.PePlot.Show3DShadow = false;\par
+                Pepco1.PePlot.DataShadows = DataShadows.ThreeDimensional;\par
+\par
+                // Set various other properties //\par
+                Pepco1.PeColor.BitmapGradientMode = true;\par
+                Pepco1.PeColor.QuickStyle = QuickStyle.LightShadow;\par
+                Pepco1.PeUserInterface.Menu.GradientStyle = MenuControl.Hide;\par
+                \par
+                // Add Some Padding on Right and Bottom //\par
+                Pepco1.PeConfigure.ImageAdjustLeft = 100;\par
+                Pepco1.PeConfigure.ImageAdjustRight = 100;\par
+                Pepco1.PeConfigure.ImageAdjustBottom = 100;\par
+            \}\par
+            ///end if\tab\tab\par
+\par
+            Pepco1.PeFunction.ReinitializeResetImage();\par
+            Pepco1.Invalidate();\par
+\tab\tab\}\par
+\tab\}\par
+\}\par
+\par
+\par
+\par
+\par
+\par
+}
+ 

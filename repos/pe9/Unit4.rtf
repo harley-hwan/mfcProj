@@ -1,0 +1,670 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\f0\fs22\lang1033 unit Unit4;\par
+\par
+interface\par
+\par
+uses\par
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,\par
+  Pepsvcl, Pegrpapi;\par
+\par
+type\par
+  TForm4 = class(TForm)\par
+    Pepso1: PEPGraph;\par
+    Procedure CreateSimplePolar;\par
+    Procedure CreateAllCharts;\par
+    procedure FormResize(Sender: TObject);\par
+    procedure FormShow(Sender: TObject);\par
+  private\par
+    \{ Private declarations \}\par
+  public\par
+    \{ Public declarations \}\par
+  end;\par
+\par
+var\par
+  Form4: TForm4;\par
+\par
+implementation\par
+\par
+uses Unit1, Unit2, Unit3, Unit5, Unit6;\par
+\par
+\{$R *.DFM\}\par
+\par
+Procedure TForm4.CreateAllCharts;\par
+\par
+type info = array[0..15] of double;\par
+\par
+Var\par
+s : Integer;\par
+p : Integer;\par
+dPTT : double;\par
+dPLT : double;\par
+dP3T : double;\par
+dHLT :  double;\par
+dwHLC : DWORD;\par
+nChart : Integer;\par
+t : String;\par
+\par
+const\par
+    DataX:info = (90, 67.5, 45, 22.5, 0, 337.5, 315, 292.5, 270,\par
+                247.5, 225, 202.5, 180, 157.5, 135, 112.5);\par
+Begin\par
+\par
+\{check to see if a list item has been selected\}\par
+if form1.list1.ItemIndex < 0 then exit;\par
+\{pull the 3 digit number out of the index and convert it to an integer\}\par
+t := form1.list1.items.strings[form1.list1.ItemIndex];\par
+t := Copy(t,1,3);\par
+nChart := StrToInt(t);\par
+\par
+Pepso1.PEactions := psReset;\par
+Pepso1.PrepareImages := True;\par
+\par
+If nChart = 200 Then\par
+Begin\par
+\{*********************************************************************'\par
+*********************************************************************\}\par
+\{200  *** Simple Polar Chart ***\}\par
+\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+    //! Left-Click and drag to draw zoom box. Use popup memu or 'z' to undo zoom. //\par
+\par
+    // Simple example show the basics of a polar object. //\par
+    // Polar Graph's contain both YData and XData. //\par
+    Pepso1.Subsets := 2;\par
+    Pepso1.Points := 360;\par
+\par
+    // Set first subset's data\par
+    for p := 0 To 359 do\par
+    begin\par
+        Pepso1.XData[0, p] := p;\par
+        Pepso1.YData[0, p] := 150*(Sin(p * 0.054));\par
+    end;\par
+\par
+    // Set second subset's data\par
+    for p := 0 To 359 do\par
+    begin\par
+        Pepso1.XData[1, p] := p;\par
+        Pepso1.YData[1, p] := 150 * (Sin(p * 0.044))* 2;\par
+    end;\par
+\par
+    // Set plotting method, zooming, etc //\par
+    Pepso1.PlottingMethod := psPointsPlusLine;\par
+    Pepso1.AllowZooming :=  psHorzPlusVertZooming;\par
+    Pepso1.MainTitle := 'Polar Chart';\par
+    Pepso1.SubTitle := '';\par
+    Pepso1.FontSizeLegendCntl := 0.9;\par
+    Pepso1.PrepareImages := True;\par
+    Pepso1.CacheBmp := True;\par
+    Pepso1.FocalRect := False;\par
+\par
+    // Set Subset line types //\par
+    Pepso1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pepso1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+\par
+    // Set Subset colors //\par
+    Pepso1.SubsetColors[0] := Pepso1.PEargb(255, 198,0,0);\par
+    Pepso1.SubsetColors[1] := Pepso1.PEargb(255, 0,198,0);\par
+\par
+    // Set point types //\par
+    Pepso1.SubsetPointTypes[0] := PEPT_DOTSOLID;\par
+    Pepso1.SubsetPointTypes[1] := PEPT_DOTSOLID;\par
+\par
+    // Set Subset labels //\par
+    Pepso1.SubsetLabels[0] := 'Signal #1';\par
+    Pepso1.SubsetLabels[1] := 'Signal #2';\par
+\par
+    // Change null data value so zeros are plotted //\par
+    Pepso1.NullDataValueX := -99999;\par
+    Pepso1.NullDataValueY := -99999;\par
+\par
+    // Set Various other features //\par
+    Pepso1.FixedFonts := True;\par
+    Pepso1.BitmapGradientMode := true;\par
+    Pepso1.QuickStyle := eQuickStyle.psDarkNoBorder;\par
+\par
+    Pepso1.SimplePointLegend := true;\par
+    Pepso1.SimpleLineLegend := True;\par
+    Pepso1.LegendStyle := psOneLine;\par
+    Pepso1.ZoomStyle := psRO2NOT;\par
+    Pepso1.PointSize := psSmallPoints;\par
+\par
+    Pepso1.TextShadows := psShadowBoldText;\par
+    Pepso1.MainTitleBold := True;\par
+    Pepso1.SubTitleBold := True;\par
+    Pepso1.LabelBold := True;\par
+    Pepso1.LineShadows := True;\par
+    Pepso1.FontSize := psLarge;\par
+    Pepso1.DataShadows := psWithShadows;\par
+    Pepso1.FontSizeGNCntl := 1.2;\par
+\par
+    Pepso1.PointGradientStyle := psVerticalAscentPG;\par
+    Pepso1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+    Pepso1.LineSymbolThickness := 3;\par
+\par
+    Pepso1.ImageAdjustBottom  := 100;\par
+\par
+    // Set various export defaults //\par
+    Pepso1.DpiX := 600;\par
+    Pepso1.DpiY := 600;\par
+\par
+    Pepso1.ExportSizeDef := psExportNoSizeOrPixels;\par
+    Pepso1.ExportTypeDef := psExportPng;\par
+    Pepso1.ExportDestDef := psExportToClipboard;\par
+    Pepso1.ExportUnitXDef := '1280';\par
+    Pepso1.ExportUnitYDef := '768';\par
+    Pepso1.ExportImageDpi := 300;\par
+    Pepso1.AllowSvgExport := True;\par
+\par
+    Pepso1.RenderEngine := psDirect2D;\par
+    Pepso1.AntiAliasGraphics := True;\par
+    Pepso1.AntiAliasText := True;\par
+\par
+ End\par
+Else If nChart = 201 Then\par
+ Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{201  Polar Chart showing custom polar grid\}\par
+\par
+    //! Note degree axis is hours on clock //\par
+\par
+    // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+    CreateSimplePolar;\par
+\par
+    // Change the data for some variety //\par
+    Pepso1.Subsets := 2;\par
+    Pepso1.Points := 360;\par
+\par
+    for p:= 0 to 359 do\par
+    begin\par
+        Pepso1.XData[0,p] := p;\par
+        Pepso1.YData[0,p] := sin(p * 0.019) * sin(p * 0.019);\par
+    end;\par
+\par
+    for p:= 0 to 359 do\par
+    begin\par
+        Pepso1.XData[1,p] := p;\par
+        Pepso1.YData[1,p] := cos(p * 0.074);\par
+    end;\par
+\par
+    // Change zero degree to 12 o clock location //\par
+    Pepso1.ZeroDegreeOffset := 90;\par
+\par
+    // Set Manual Degree Line Frequencies //\par
+    Pepso1.ManualXAxisTicknLine := True;\par
+    Pepso1.ManualXAxisTick := 7.5;\par
+    Pepso1.ManualXAxisLine := 30;\par
+\par
+    // Change direction of increasing degrees //\par
+    Pepso1.InvertedXAxis := True;\par
+\par
+    //Set Point Labels\par
+    Pepso1.PointLabels[0] := '12';\par
+    Pepso1.PointLabels[1] := '11';\par
+    Pepso1.PointLabels[2] := '10';\par
+    Pepso1.PointLabels[3] := '9';\par
+    Pepso1.PointLabels[4] := '8';\par
+    Pepso1.PointLabels[5] := '7';\par
+    Pepso1.PointLabels[6] := '6';\par
+    Pepso1.PointLabels[7] := '5';\par
+    Pepso1.PointLabels[8] := '4';\par
+    Pepso1.PointLabels[9] := '3';\par
+    Pepso1.PointLabels[10] := '2';\par
+    Pepso1.PointLabels[11] := '1';\par
+\par
+    // Set Various other features //\par
+    Pepso1.BitmapGradientMode := True;\par
+    Pepso1.QuickStyle := psMedNoBorder;\par
+    Pepso1.MarkDataPoints := True;\par
+\par
+    Pepso1.DisableClipping := False;\par
+\par
+ End\par
+Else If nChart = 202 Then\par
+ Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{202  Polar Chart showing bi-polar grid\}\par
+\par
+    //! Note there are two radius axes, one horizontal and one vertical //\par
+\par
+    // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+    CreateSimplePolar;\par
+\par
+    // Set last subset as a subset to be plotted\par
+    // on a secondary axis\par
+    Pepso1.RYAxisComparisonSubsets := 1;\par
+    Pepso1.PlottingMethodII := psLine2;\par
+\par
+    // Set second subset's data to a new range //\par
+    For p := 0 To 359 Do\par
+    begin\par
+        Pepso1.XData[1, p] := p;\par
+        Pepso1.YData[1, p] := (Sin(p * 0.014) * 16);\par
+    end;\par
+\par
+    // Set Various other features //\par
+    Pepso1.BitmapGradientMode := True;\par
+    Pepso1.QuickStyle := psDarkLine;\par
+    Pepso1.BorderTypes := psNoBorder;\par
+    Pepso1.PointSize := psSmallPoints;\par
+\par
+    // Add Some Padding on Right and Bottom //\par
+    Pepso1.ImageAdjustLeft := 100;\par
+    Pepso1.ImageAdjustRight := 100;\par
+    Pepso1.ImageAdjustBottom := 100;\par
+\par
+  End\par
+Else If nChart = 203 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{203  Polar Chart showing smith chart\}\par
+\par
+    // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+    CreateSimplePolar;\par
+\par
+    // Enable Smith Mode //\par
+    Pepso1.SmithChart := psSmithMode;\par
+    Pepso1.MainTitle := 'Smith Chart';\par
+\par
+    // Change the data to something more appropriate //\par
+    Pepso1.Subsets := 2;\par
+    Pepso1.Points := 40;\par
+\par
+    // Set first subset's data //\par
+    for p := 0 To 39 Do\par
+    begin\par
+        Pepso1.XData[0, p] := p * 0.1;\par
+        Pepso1.YData[0, p] := (Sin(p * 0.54) * 0.2);\par
+    end;\par
+\par
+    // Set second subset's data //\par
+    for p := 0 To 39 Do\par
+    begin\par
+        Pepso1.XData[1, p] := p * 0.5;\par
+        Pepso1.YData[1, p] := (Sin(p * 0.44) * 0.5);\par
+    end;\par
+\par
+    // Set Various other features //\par
+    Pepso1.BitmapGradientMode := True;\par
+    Pepso1.QuickStyle := psDarkNoBorder;\par
+\par
+    // Add Some Padding on Right and Bottom //\par
+    Pepso1.ImageAdjustLeft := 100;\par
+    Pepso1.ImageAdjustRight := 100;\par
+    Pepso1.ImageAdjustBottom := 100;\par
+\par
+  End\par
+Else If nChart = 204 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{204  Polar Chart showing rose chart\}\par
+\par
+    // Enable Smith Mode //\par
+    Pepso1.SmithChart := psRoseMode;\par
+    Pepso1.MainTitle := 'Rose Chart';\par
+\par
+    // Change the data to something more appropriate //\par
+    Pepso1.Subsets := 13;\par
+    Pepso1.Points := 16;\par
+\par
+    // Set first subset's data //\par
+    for s := 0 To 12 do\par
+        for p := 0 To 15 do\par
+        begin\par
+            Pepso1.XData[s, p] := DataX[p];\par
+            Pepso1.YData[s, p] := 10 + (Random * 25);\par
+        end;\par
+\par
+    // Set Point Labels, these will label degree grid lines //\par
+    Pepso1.PointLabels[0] := 'E';\par
+    Pepso1.PointLabels[1] := 'ENE';\par
+    Pepso1.PointLabels[2] := 'NE';\par
+    Pepso1.PointLabels[3] := 'NNE';\par
+    Pepso1.PointLabels[4] := 'N';\par
+    Pepso1.PointLabels[5] := 'NNW';\par
+    Pepso1.PointLabels[6] := 'NW';\par
+    Pepso1.PointLabels[7] := 'WNW';\par
+    Pepso1.PointLabels[8] := 'W';\par
+    Pepso1.PointLabels[9] := 'WSW';\par
+    Pepso1.PointLabels[10] := 'SW';\par
+    Pepso1.PointLabels[11] := 'SSW';\par
+    Pepso1.PointLabels[12] := 'S';\par
+    Pepso1.PointLabels[13] := 'SSE';\par
+    Pepso1.PointLabels[14] := 'SE';\par
+    Pepso1.PointLabels[15] := 'ESE';\par
+\par
+    // Set Subset Labels, these will show in legend //\par
+    Pepso1.SubsetLabels[0] := '3.75';\par
+    Pepso1.SubsetLabels[1] := '6.25';\par
+    Pepso1.SubsetLabels[2] := '8.75';\par
+    Pepso1.SubsetLabels[3] := '11.25';\par
+    Pepso1.SubsetLabels[4] := '13.75';\par
+    Pepso1.SubsetLabels[5] := '16.25';\par
+    Pepso1.SubsetLabels[6] := '18.75';\par
+    Pepso1.SubsetLabels[7] := '21.25';\par
+    Pepso1.SubsetLabels[8] := '23.75';\par
+    Pepso1.SubsetLabels[9] := '26.25';\par
+    Pepso1.SubsetLabels[10] := '28.75';\par
+    Pepso1.SubsetLabels[11] := '31.25';\par
+    Pepso1.SubsetLabels[12] := '33.75';\par
+\par
+    // Manually control degree line frequency //\par
+    Pepso1.ManualXAxisTicknLine := True;\par
+    Pepso1.ManualXAxisLine := 22.5;\par
+    Pepso1.ManualXAxisTick := 22.5;\par
+\par
+    // So monochrome images use just black and white //\par
+    Pepso1.SubsetShades[0] := 0;\par
+    Pepso1.SubsetShades[1] := Pepso1.PEargb(255, 255,255,255);\par
+\par
+    // Get rid of normal legend, rose has a special legend //\par
+    Pepso1.SubsetsToLegend[0] := -1;\par
+\par
+    // No radius line labels //\par
+    Pepso1.RLabels := False;\par
+    Pepso1.FontSize := psSmall;\par
+\par
+    // PEP_szMANUALMAXDATASTRING is not part of this ocx interface //\par
+    // so we use a DLL call to set this property //\par
+    PEszsetW(Pepso1.hObject, PEP_szMANUALMAXDATASTRING, '1.25|1.1%');\par
+\par
+    // Enable zooming //\par
+    Pepso1.AllowZooming := psHorzPlusVertZooming;\par
+    Pepso1.FixedFonts := True;\par
+\par
+    Pepso1.BitmapGradientMode := False;\par
+    Pepso1.QuickStyle := psDarkNoBorder;\par
+\par
+    Pepso1.SimplePointLegend := True;\par
+    Pepso1.SimpleLineLegend := True;\par
+    Pepso1.LegendStyle := psOneLine;\par
+    Pepso1.ZoomStyle := psRO2NOT;\par
+    Pepso1.PointSize := psSmallPoints;\par
+    Pepso1.PrepareImages := True;\par
+    Pepso1.CacheBmp := True;\par
+\par
+    // Add Some Padding on Right and Bottom //\par
+    Pepso1.ImageAdjustLeft := 100;\par
+    Pepso1.ImageAdjustRight := 100;\par
+    Pepso1.ImageAdjustBottom := 100;\par
+\par
+    Pepso1.TextShadows := psShadowBoldText;\par
+    Pepso1.MainTitleBold := True;\par
+    Pepso1.SubTitleBold := True;\par
+    Pepso1.LabelBold := True;\par
+    Pepso1.LineShadows := True;\par
+    Pepso1.FontSize := psMedium;\par
+    Pepso1.DataShadows := psWithShadows;\par
+    Pepso1.FontSizeGNCntl := 1.2;\par
+\par
+    // Set various export defaults //\par
+    Pepso1.DpiX := 600;\par
+    Pepso1.DpiY := 600;\par
+\par
+    Pepso1.ExportSizeDef := psExportNoSizeOrPixels;\par
+    Pepso1.ExportTypeDef := psExportPng;\par
+    Pepso1.ExportDestDef := psExportToClipboard;\par
+    Pepso1.ExportUnitXDef := '1280';\par
+    Pepso1.ExportUnitYDef := '768';\par
+    Pepso1.ExportImageDpi := 300;\par
+    Pepso1.AllowSvgExport := True;\par
+\par
+    Pepso1.RenderEngine := psDirect2D;\par
+    Pepso1.AntiAliasGraphics := True;\par
+    Pepso1.AntiAliasText := True;\par
+\par
+\par
+End\par
+Else If nChart = 205 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{205  Polar Chart showing custom ticks and lines\}\par
+\par
+    //! Polar Chart with complex gridline and gridtick structure. //\par
+    //! Maximize, or better yet, Print this chart to see full detail. //\par
+    //! A quick way to print is give control focus and press 'p' //\par
+\par
+    // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+    CreateSimplePolar;\par
+\par
+    //! This features will cause image to automatically switch to monochrome //\par
+    //! when print export dialog is invoked. //\par
+    Pepso1.PrintStyleControl := psPrintDefaultMono;\par
+\par
+    // Change Subsets to 1 //\par
+    Pepso1.Subsets := 1;\par
+    Pepso1.Points := 40;\par
+\par
+    // Pass some new data //\par
+    for p:=0 to 39 do\par
+        begin\par
+            Pepso1.XData[0,p] := p * 5;\par
+            Pepso1.YData[0,p] := 90 * sin(p * 0.24);\par
+        end;\par
+\par
+    // Manually Configure Degree Axis Density //\par
+    Pepso1.ManualXAxisTicknLine := True;\par
+    Pepso1.ManualXAxisLine := 10.0; // major grid lines every 10 units\par
+    Pepso1.ManualXAxisTick := 2.0;  // minor tick marks every 2 units\par
+\par
+    // Manually Configure Radius Axis Range //\par
+    Pepso1.ManualScaleControlY := psManualMinAndMax;\par
+    Pepso1.ManualMinY := 0.0;\par
+    Pepso1.ManualMaxY := 105.0;\par
+\par
+    // Ticks draw similar to grid lines //\par
+    Pepso1.XAxisLongTicks := True;\par
+    Pepso1.YAxisLongTicks := True;\par
+\par
+    // tick marks only draw outside this diameter //\par
+    dPTT := 60.0;\par
+    PEvsetW(Pepso1.hObject , PEP_fPOLARTICKTHRESHOLD, @dPTT, 1);\par
+\par
+    // major grid lines only draw outside this diameter //\par
+    dPLT := 20.0;\par
+    PEvsetW(Pepso1.hObject, PEP_fPOLARLINETHRESHOLD, @dPLT, 1);\par
+\par
+    // 30 degree major grid lines only draw outside this diameter //\par
+    dP3T := 1.0;\par
+    PEvsetW(Pepso1.hObject, PEP_fPOLAR30DEGTHRESHOLD, @dP3T, 1);\par
+\par
+    // Set  various other properties //\par
+    Pepso1.BitmapGradientMode := False;\par
+    Pepso1.QuickStyle := psDarkNoBorder;\par
+    Pepso1.ViewingStyle := psMonochrome;\par
+    Pepso1.GraphForeColor := Pepso1.PEargb(255, 255,255,255);\par
+    Pepso1.TickColor := Pepso1.PEargb(255, 70,70,70);\par
+    Pepso1.PlottingMethod := psPoint;\par
+    Pepso1.GridStyle := psPixel;\par
+\par
+End\par
+Else If nChart = 206 Then\par
+  Begin\par
+\{*********************************************************************'\par
+'*********************************************************************\}\par
+\{206  Polar Chart showing Horizontal Line Annotations\}\par
+\par
+    //! Horizontal Line Annotations Plot as Circles //\par
+\par
+    // This example builds upon the basic CreateSimplePolar '200' example chart //\par
+    CreateSimplePolar;\par
+\par
+    dHLT := 50.0;\par
+    PEvsetcellW(Pepso1.hobject, PEP_faHORZLINEANNOTATION,0,@dHlt);\par
+    dHLT := 100.0;\par
+    PEvsetcellW(Pepso1.hobject, PEP_faHORZLINEANNOTATION,1,@dHlt);\par
+    dHLT := 150.0;\par
+    PEvsetcellW(Pepso1.hobject, PEP_faHORZLINEANNOTATION,2,@dHlt);\par
+    dHLT := 200.0;\par
+    PEvsetcellW(Pepso1.hobject, PEP_faHORZLINEANNOTATION,3,@dHlt);\par
+    dHLT := 250.0;\par
+    PEvsetcellW(Pepso1.hobject, PEP_faHORZLINEANNOTATION,4,@dHlt);\par
+\par
+    dwHLC := Pepso1.PEargb(255, 198,0,0);\par
+    PEvsetcellW(Pepso1.hobject, PEP_dwaHORZLINEANNOTATIONCOLOR,0,@dwHLC);\par
+    dwHLC := Pepso1.PEargb(255, 0,198,198);\par
+    PEvsetcellW(Pepso1.hobject, PEP_dwaHORZLINEANNOTATIONCOLOR,1,@dwHLC);\par
+    dwHLC := Pepso1.PEargb(255, 0,198,0);\par
+    PEvsetcellW(Pepso1.hobject, PEP_dwaHORZLINEANNOTATIONCOLOR,2,@dwHLC);\par
+    dwHLC :=  Pepso1.PEargb(255, 198, 198, 0);\par
+    PEvsetcellW(Pepso1.hobject, PEP_dwaHORZLINEANNOTATIONCOLOR,3,@dwHLC);\par
+    dwHLC :=  Pepso1.PEargb(255, 255,255,255);\par
+    PEvsetcellW(Pepso1.hobject, PEP_dwaHORZLINEANNOTATIONCOLOR,4,@dwHLC);\par
+    Pepso1.ShowAnnotations := True;\par
+\par
+    // change subset colors //\par
+    Pepso1.SubsetColors[0] := Pepso1.PEargb(128,155,0,0);\par
+    Pepso1.SubsetColors[1] := Pepso1.PEargb(128,0,155,0);\par
+\par
+    // Only show Degree Grid Lines //\par
+    Pepso1.GridLineControl := psDegrees;\par
+\par
+End\par
+Else If nChart = 299 Then\par
+  Begin\par
+\par
+    \par
+End;\par
+\par
+Pepso1.PEactions := psReinitAndReset;\par
+\par
+If (Form4.Visible = False) Then Form4.Show;\par
+\par
+End;\par
+\par
+Procedure TForm4.CreateSimplePolar;\par
+\par
+Var\par
+p : Integer;\par
+\par
+Begin\par
+    //! Right button click to show popup menu. //\par
+    //! Double Click to show customization dialog. //\par
+    //! Left-Click and drag to draw zoom box. Use popup memu or 'z' to undo zoom. //\par
+\par
+    // Simple example show the basics of a polar object. //\par
+    // Polar Graph's contain both YData and XData. //\par
+    Pepso1.Subsets := 2;\par
+    Pepso1.Points := 360;\par
+\par
+    // Set first subset's data\par
+    for p := 0 To 359 do\par
+    begin\par
+        Pepso1.XData[0, p] := p;\par
+        Pepso1.YData[0, p] := 150*(Sin(p * 0.054));\par
+    end;\par
+\par
+    // Set second subset's data\par
+    for p := 0 To 359 do\par
+    begin\par
+        Pepso1.XData[1, p] := p;\par
+        Pepso1.YData[1, p] := 150 * (Sin(p * 0.044))* 2;\par
+    end;\par
+\par
+    // Set plotting method, zooming, etc //\par
+    Pepso1.PlottingMethod := psPointsPlusLine;\par
+\par
+    Pepso1.AllowZooming :=  psHorzPlusVertZooming;\par
+    Pepso1.MainTitle := 'Polar Chart';\par
+    Pepso1.SubTitle := '';\par
+    Pepso1.FontSizeLegendCntl := 0.9;\par
+    Pepso1.PrepareImages := True;\par
+    Pepso1.CacheBmp := True;\par
+    Pepso1.FocalRect := False;\par
+\par
+    // Set Subset line types //\par
+    Pepso1.SubsetLineTypes[0] := PELT_MEDIUMSOLID;\par
+    Pepso1.SubsetLineTypes[1] := PELT_MEDIUMSOLID;\par
+\par
+    // Set Subset colors //\par
+    Pepso1.SubsetColors[0] := Pepso1.PEargb(255, 198,0,0);\par
+    Pepso1.SubsetColors[1] := Pepso1.PEargb(255, 0,198,0);\par
+\par
+    // Set point types //\par
+    Pepso1.SubsetPointTypes[0] := PEPT_DOTSOLID;\par
+    Pepso1.SubsetPointTypes[1] := PEPT_DOTSOLID;\par
+\par
+    // Set Subset labels //\par
+    Pepso1.SubsetLabels[0] := 'Signal #1';\par
+    Pepso1.SubsetLabels[1] := 'Signal #2';\par
+\par
+    // Change null data value so zeros are plotted //\par
+    Pepso1.NullDataValueX := -99999;\par
+    Pepso1.NullDataValueY := -99999;\par
+\par
+    // Set Various other features //\par
+    Pepso1.FixedFonts := True;\par
+    Pepso1.BitmapGradientMode := true;\par
+    Pepso1.QuickStyle := eQuickStyle.psDarkNoBorder;\par
+\par
+    Pepso1.SimplePointLegend := true;\par
+    Pepso1.SimpleLineLegend := True;\par
+    Pepso1.LegendStyle := psOneLine;\par
+    Pepso1.ZoomStyle := psRO2NOT;\par
+    Pepso1.PointSize := psSmallPoints;\par
+\par
+    Pepso1.TextShadows := psShadowBoldText;\par
+    Pepso1.MainTitleBold := True;\par
+    Pepso1.SubTitleBold := True;\par
+    Pepso1.LabelBold := True;\par
+    Pepso1.LineShadows := True;\par
+    Pepso1.FontSize := psLarge;\par
+    Pepso1.DataShadows := psWithShadows;\par
+    Pepso1.FontSizeGNCntl := 1.2;\par
+\par
+    Pepso1.PointGradientStyle := psVerticalAscentPG;\par
+    Pepso1.PointBorderColor := Pego1.PEargb(100, 0, 0, 0);\par
+    Pepso1.LineSymbolThickness := 3;\par
+\par
+    Pepso1.ImageAdjustBottom  := 100;\par
+\par
+    // Set various export defaults //\par
+    Pepso1.DpiX := 600;\par
+    Pepso1.DpiY := 600;\par
+\par
+    Pepso1.ExportSizeDef := psExportNoSizeOrPixels;\par
+    Pepso1.ExportTypeDef := psExportPng;\par
+    Pepso1.ExportDestDef := psExportToClipboard;\par
+    Pepso1.ExportUnitXDef := '1280';\par
+    Pepso1.ExportUnitYDef := '768';\par
+    Pepso1.ExportImageDpi := 300;\par
+    Pepso1.AllowSvgExport := True;\par
+\par
+    Pepso1.RenderEngine := psDirect2D;\par
+    Pepso1.AntiAliasGraphics := True;\par
+    Pepso1.AntiAliasText := True;\par
+\par
+\par
+End;\par
+\par
+procedure TForm4.FormResize(Sender: TObject);\par
+begin\par
+Pepso1.left := 0;\par
+Pepso1.top := 0;\par
+Pepso1.Width := Form4.ClientWidth;\par
+Pepso1.Height := Form4.ClientHeight;\par
+end;\par
+\par
+procedure TForm4.FormShow(Sender: TObject);\par
+begin\par
+Form4.left := 0;\par
+Form4.top := trunc(Screen.Height / 3);\par
+\par
+if (Screen.Width > 1920) then\par
+  Form4.Width := 1920\par
+else\par
+  Form4.Width := Screen.Width;\par
+\par
+Form4.Height := trunc(Screen.Height * 1.9 / 3);\par
+end;\par
+\par
+end.\par
+\par
+}
+ 
