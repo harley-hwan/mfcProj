@@ -1,24 +1,17 @@
 
-// ThreadEXDlg.cpp : implementation file
+// mfcSocketDlg.cpp : implementation file
 //
 
 #include "pch.h"
 #include "framework.h"
-#include "ThreadEX.h"
-#include "ThreadEXDlg.h"
+#include "mfcSocket.h"
+#include "mfcSocketDlg.h"
 #include "afxdialogex.h"
-
-#include <time.h>
-#include <stdio.h>
-#include <conio.h>
-#include <Windows.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-#include <ctime>
 
-void print_time(struct tm* now, int tail);
 
 // CAboutDlg dialog used for App About
 
@@ -53,33 +46,31 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CThreadEXDlg dialog
+// CmfcSocketDlg dialog
 
 
 
-CThreadEXDlg::CThreadEXDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_THREADEX_DIALOG, pParent)
+CmfcSocketDlg::CmfcSocketDlg(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_MFCSOCKET_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-void CThreadEXDlg::DoDataExchange(CDataExchange* pDX)
+void CmfcSocketDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 }
 
-BEGIN_MESSAGE_MAP(CThreadEXDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CmfcSocketDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_BUTTON1, &CThreadEXDlg::OnBnClickedButton1)
-	ON_BN_CLICKED(IDC_BUTTON2, &CThreadEXDlg::OnBnClickedButton2)
 END_MESSAGE_MAP()
 
 
-// CThreadEXDlg message handlers
+// CmfcSocketDlg message handlers
 
-BOOL CThreadEXDlg::OnInitDialog()
+BOOL CmfcSocketDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
@@ -109,12 +100,11 @@ BOOL CThreadEXDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
-	p1 = NULL;
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
-void CThreadEXDlg::OnSysCommand(UINT nID, LPARAM lParam)
+void CmfcSocketDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
@@ -131,7 +121,7 @@ void CThreadEXDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  to draw the icon.  For MFC applications using the document/view model,
 //  this is automatically done for you by the framework.
 
-void CThreadEXDlg::OnPaint()
+void CmfcSocketDlg::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -158,92 +148,8 @@ void CThreadEXDlg::OnPaint()
 
 // The system calls this function to obtain the cursor to display while the user drags
 //  the minimized window.
-HCURSOR CThreadEXDlg::OnQueryDragIcon()
+HCURSOR CmfcSocketDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
-
-void CThreadEXDlg::OnBnClickedButton1()
-{
-	// TODO: Add your control notification handler code here
-	p1 = AfxBeginThread(TimeThread, this);
-
-	if (p1 == NULL) {
-		AfxMessageBox(L"Error!");
-	}
-}
-
-
-void CThreadEXDlg::OnBnClickedButton2()
-{
-	// TODO: Add your control notification handler code here
-	// thread 중지
-	if (NULL != p1) {
-		::SuspendThread(p1->m_hThread);
-	}
-}
-
-/*
-CThreadEXDlg* fir = (CThreadEXDlg*)_mothod;
-while (1) {
-	CTime cTime = CTime::GetCurrentTime();
-	fir->m_staticDisp.Format(_T("%d년 %d월 %d일\n%d시 %d분 %d초"),
-		cTime.GetYear(), cTime.GetMonth(), cTime.GetDay(),
-		cTime.GetHour(), cTime.GetMinute(), cTime.GetSecond());
-	fir->SetDlgItemText(IDC_STATIC_DIS, fir->m_staticDisp);
-	Sleep(1000);
-}
-return 0;
-*/
-
-UINT CThreadEXDlg::TimeThread(LPVOID _mothod)
-{
-	CThreadEXDlg* fir = (CThreadEXDlg*)_mothod;
-	
-	clock_t sclock, nclock;
-	time_t seconds;
-	struct tm now;
-	int tail = 0;
-
-	sclock = clock();
-	time(&seconds);
-	localtime_s(&now, &seconds);
-	print_time(&now, tail);
-
-	while (1) {
-
-		/*fir->m_staticDisp.Format(_T("%2d시 %2d분 %2d초 %2d\n", now->tm_hour, now->tm_min, now->tm_sec, tail));
-		fir->SetDlgItemTextW(IDC_STATIC_DISP, fir->m_staticDisp);
-		Sleep(100);*/
-
-		if (_kbhit())
-		{
-			break;
-		}
-		nclock = clock();
-
-		if (nclock - sclock >= (CLOCKS_PER_SEC / 1000))
-		{
-			tail++;
-			if (tail == 1000)//1초가 지나면
-			{
-				tail = 0;
-				sclock = clock();
-				time(&seconds);
-				localtime_s(&now, &seconds);
-			}
-			print_time(&now, tail);
-		}
-	}
-	return 0;
-}
-
-void print_time(struct tm* now, int tail)
-{
-	COORD CursorPostion = { 0,1 };
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPostion);
-
-	printf("%2d시 %2d분 %2d초 %2d\n", now->tm_hour, now->tm_min, now->tm_sec, tail);
-}
